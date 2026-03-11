@@ -1,6 +1,177 @@
+# ============================================================
+#   SRM Autonomous Electric Campus Buggy — .gitignore
+#   ROS 2 Humble | Gazebo Classic 11 | Python 3 | Ubuntu 22.04
+# ============================================================
+
+# ─── ROS 2 Workspace Artifacts ───────────────────────────────
 build/
 install/
 log/
+.colcon/
+*.log
+
+# ─── ROS 2 Generate & Cache Files ────────────────────────────
+devel/
+.catkin_tools/
+.catkin_workspace
+roslaunch-*.pid
+
+# ─── Python ──────────────────────────────────────────────────
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+eggs/
+parts/
+var/
+sdist/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+MANIFEST
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+*.py,cover
+nosetests.xml
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ─── C++ / CMake ─────────────────────────────────────────────
+*.o
+*.a
+*.so
+*.so.*
+*.dylib
+*.out
+*.app
+CMakeCache.txt
+CMakeFiles/
+CMakeTmp/
+cmake_install.cmake
+Makefile
+CTestTestfile.cmake
+_CPack_Packages/
+*.cmake
+!CMakeLists.txt
+
+# ─── Gazebo / Simulation ─────────────────────────────────────
+*.world.bak
+gazebo_*.log
+/tmp/gzserver*
+/tmp/gzclient*
+gzserver.pid
+gzclient.pid
+
+# ─── IDE — VS Code ───────────────────────────────────────────
 .vscode/
+*.code-workspace
+.history/
+
+# ─── IDE — CLion / JetBrains ─────────────────────────────────
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+cmake-build-*/
+
+# ─── IDE — Eclipse ───────────────────────────────────────────
+.project
+.classpath
+.cproject
+.settings/
+
+# ─── IDE — Vim / Emacs ───────────────────────────────────────
+*.swp
+*.swo
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+auto-save-list
+tramp
+.\#*
+
+# ─── OS — macOS ──────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# ─── OS — Windows ────────────────────────────────────────────
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# ─── OS — Linux ──────────────────────────────────────────────
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ─── URDF / XACRO Generated ──────────────────────────────────
+*.urdf.generated
+/tmp/*.urdf
+
+# ─── RosBag Recordings ───────────────────────────────────────
+*.bag
+*.db3
+*.mcap
+metadata.yaml
+
+# ─── Documentation Build Artifacts ───────────────────────────
+docs/_build/
+docs/build/
+site/
+
+# ─── Binary / Media (keep only source assets, not outputs) ───
+*.mp4
+*.avi
+*.mkv
+# Allow PNG/JPG for screenshots in docs/assets
+!docs/**/*.png
+!docs/**/*.jpg
+!docs/**/*.gif
+
+# ─── Credentials & Secrets ───────────────────────────────────
+.env
+*.pem
+*.key
+secrets.yaml
+credentials.yaml
+
+# ─── Misc ────────────────────────────────────────────────────
+*.tmp
+*.bak
+*.orig
+*.rej
+*.patch
+.DS_Store
+tags
+TAGS
