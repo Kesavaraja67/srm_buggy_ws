@@ -24,6 +24,11 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'path_planner = buggy_brain.path_planner_node:main',
+            'waypoint_follower = buggy_brain.waypoint_follower:main',
+            'obstacle_detector = buggy_brain.obstacle_detector:main',
+            'state_machine = buggy_brain.state_machine:main',
+            'speed_controller = buggy_brain.speed_controller:main',
         ],
     },
 )
