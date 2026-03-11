@@ -453,7 +453,7 @@ MINIMUM VIABLE DEMO — Phase 1 is a success if ALL 5 are true:
 ## 👥 Team
 
 **SRM Institute of Science and Technology**  
-Department of Robotics and Automation Engineering  
+Department of Artificial Inteligence and Machine Learning.  
 6-Person Autonomous Systems Team · Phase 1 SITL Sprint · March 2026
 
 | Sub-Team | Members | Responsibility |
