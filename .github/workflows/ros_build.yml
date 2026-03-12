@@ -1,0 +1,22 @@
+name: ROS 2 Humble Build Check
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    container:
+      image: ros:humble-ros-base  # Use the official ROS Humble image
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          apt update
+          rosdep update
+          rosdep install --from-paths . --ignore-src -y
+      - name: Colcon Build
+        run: |
+          . /opt/ros/humble/setup.sh
+          colcon build --symlink-install
