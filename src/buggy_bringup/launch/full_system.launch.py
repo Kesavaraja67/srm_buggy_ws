@@ -27,10 +27,12 @@ def generate_launch_description():
     robot_description = ParameterValue(Command(['xacro ', xacro_file]), value_type=str)
 
     # ── Launch arguments ──────────────────────────────────────
-    declare_gui     = DeclareLaunchArgument('gui',     default_value='true')
-    declare_verbose = DeclareLaunchArgument('verbose', default_value='false')
-    gui     = LaunchConfiguration('gui')
-    verbose = LaunchConfiguration('verbose')
+    declare_gui         = DeclareLaunchArgument('gui',         default_value='true')
+    declare_verbose     = DeclareLaunchArgument('verbose',     default_value='false')
+    declare_entity_name = DeclareLaunchArgument('entity_name', default_value='srm_aquila_buggy')
+    gui         = LaunchConfiguration('gui')
+    verbose     = LaunchConfiguration('verbose')
+    entity_name = LaunchConfiguration('entity_name')
 
     # ── 1. Gazebo world ───────────────────────────────────────
     gazebo = IncludeLaunchDescription(
@@ -69,7 +71,7 @@ def generate_launch_description():
             executable='spawn_entity.py',
             arguments=[
                 '-topic', 'robot_description',
-                '-entity', 'srm_aquila_buggy',
+                '-entity', entity_name,
                 '-x', '0.0',     # BUGGY_HUB X  §2.2
                 '-y', '0.0',     # BUGGY_HUB Y  §2.2
                 '-z', '0.425',   # wheel_radius + chassis clearance
@@ -81,27 +83,24 @@ def generate_launch_description():
 
     # ── 4. Brain nodes — uncomment when Team Bravo adds them ──
     # brain_nodes = [
-    #     Node(package='buggy_brain', executable='path_planner_node',
+    #     Node(package='buggy_brain', executable='path_planner',
     #          parameters=[{'use_sim_time': True}], output='screen'),
     #     Node(package='buggy_brain', executable='waypoint_follower',
     #          parameters=[{'use_sim_time': True}], output='screen'),
     #     Node(package='buggy_brain', executable='obstacle_detector',
     #          parameters=[{'use_sim_time': True}], output='screen'),
-    #     Node(package='buggy_brain', executable='ultrasonic_monitor',
-    #          parameters=[{'use_sim_time': True}], output='screen'),
     #     Node(package='buggy_brain', executable='state_machine',
     #          parameters=[{'use_sim_time': True}], output='screen'),
     #     Node(package='buggy_brain', executable='speed_controller',
     #          parameters=[{'use_sim_time': True}], output='screen'),
-    #     Node(package='buggy_brain', executable='crowd_detector',
-    #          parameters=[{'use_sim_time': True}], output='screen'),
-    #     Node(package='buggy_brain', executable='demo_visualizer',
-    #          parameters=[{'use_sim_time': True}], output='screen'),
+    #     # TODO(Team Bravo): add console_scripts before enabling:
+    #     # ultrasonic_monitor, crowd_detector, demo_visualizer
     # ]
 
     return LaunchDescription([
         declare_gui,
         declare_verbose,
+        declare_entity_name,
         gazebo,
         robot_state_publisher,
         joint_state_publisher,

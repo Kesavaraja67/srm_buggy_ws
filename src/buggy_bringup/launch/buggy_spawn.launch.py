@@ -2,18 +2,25 @@
 """
 buggy_spawn.launch.py  v3.0 — SRM Autonomous Buggy
 ────────────────────────────────────────────────────
-Spawns buggy at BUGGY_HUB roundabout (0, 0)
+Spawns buggy at BUGGY_HUB roundabout
 Facing North (+Y) toward SRM_IST (0, 50)
 """
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.substitutions import Command
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import Command, LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
+
+    declare_entity_name = DeclareLaunchArgument(
+        'entity_name', default_value='srm_aquila_buggy',
+        description='Name of the robot entity spawned in Gazebo'
+    )
+    entity_name = LaunchConfiguration('entity_name')
 
     description_pkg   = get_package_share_directory('buggy_description')
     xacro_file        = os.path.join(description_pkg, 'urdf', 'buggy_urdf.xacro')
@@ -41,7 +48,7 @@ def generate_launch_description():
         name='spawn_srm_buggy',
         arguments=[
             '-topic', 'robot_description',
-            '-entity', 'srm_aquila_buggy',
+            '-entity', entity_name,
             '-x', '-11.0',   # inside buggy shelter bay, just off roundabout
             '-y', '0.0',
             '-z', '0.425',
@@ -51,6 +58,7 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        declare_entity_name,
         robot_state_publisher,
         joint_state_publisher,
         spawn_entity,

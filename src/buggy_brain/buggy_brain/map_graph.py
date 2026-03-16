@@ -70,6 +70,9 @@ def find_shortest_path(graph: dict[str, list[tuple[str, float]]], start: str, go
     while node is not None:
         path.append(node)
         node = previous[node]
+    # Unreachable goal: path will be [goal] with no connection to start
+    if len(path) == 1 and path[0] != start:
+        return []
     return list(reversed(path))
 
 
@@ -82,6 +85,10 @@ if __name__ == '__main__':
         ('BUGGY_HUB', 'SRM_IST',    ['BUGGY_HUB', 'SRM_IST']),
         ('BUGGY_HUB', 'SRM_HOSP',   ['BUGGY_HUB', 'SRM_HOSP']),
         ('BUGGY_HUB', 'SRM_TEMPLE', ['BUGGY_HUB', 'SRM_TEMPLE']),
+        # Reverse paths
+        ('SRM_IST',    'BUGGY_HUB', ['SRM_IST', 'BUGGY_HUB']),
+        ('SRM_HOSP',   'BUGGY_HUB', ['SRM_HOSP', 'BUGGY_HUB']),
+        ('SRM_TEMPLE', 'BUGGY_HUB', ['SRM_TEMPLE', 'BUGGY_HUB']),
     ]
 
     all_ok = True
@@ -93,7 +100,15 @@ if __name__ == '__main__':
         print(f"\n  {'✅' if ok else '❌'}  {start} → {goal}")
         print(f"     {DESTINATION_DISPLAY[goal]}")
         print(f"     Path : {' → '.join(result)}")
-        print(f"     Dist : {EDGES[start][['SRM_IST','SRM_HOSP','SRM_TEMPLE'].index(goal)][1]} m")
+        # Compute total distance along path
+        if len(result) > 1:
+            total_dist = sum(
+                next(w for neighbor, w in EDGES[result[i]] if neighbor == result[i + 1])
+                for i in range(len(result) - 1)
+            )
+            print(f"     Dist : {total_dist} m")
+        else:
+            print(f"     Dist : 0.0 m")
 
     print()
     print("✅ All tests passed." if all_ok else "❌ Tests FAILED — fix before integrating.")
