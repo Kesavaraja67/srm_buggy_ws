@@ -20,11 +20,14 @@ def generate_launch_description():
         value_type=str
     )
 
+    sim_time = {'use_sim_time': True}
+
     return LaunchDescription([
 
         DeclareLaunchArgument('world',    default_value='srm_campus'),
         DeclareLaunchArgument('headless', default_value='false'),
 
+        # ── Gazebo ──
         ExecuteProcess(
             cmd=['gazebo', '--verbose', world_file,
                  '-s', 'libgazebo_ros_init.so',
@@ -32,14 +35,17 @@ def generate_launch_description():
             output='screen'
         ),
 
+        # ── Robot state publisher ──
         Node(
             package='robot_state_publisher',
             executable='robot_state_publisher',
             name='robot_state_publisher',
             output='screen',
-            parameters=[{'robot_description': robot_description}]
+            parameters=[{'robot_description': robot_description,
+                         'use_sim_time': True}]
         ),
 
+        # ── Spawn buggy ──
         Node(
             package='gazebo_ros',
             executable='spawn_entity.py',
@@ -57,39 +63,80 @@ def generate_launch_description():
             ]
         ),
 
+        # ── Path planner ──
         TimerAction(period=5.0, actions=[
             Node(
                 package='buggy_brain',
                 executable='path_planner',
                 name='path_planner_node',
-                output='screen'
+                output='screen',
+                parameters=[sim_time]
             ),
         ]),
 
+        # ── Waypoint follower ──
         TimerAction(period=6.0, actions=[
             Node(
                 package='buggy_brain',
                 executable='waypoint_follower',
                 name='waypoint_follower',
-                output='screen'
+                output='screen',
+                parameters=[sim_time]
             ),
         ]),
 
+        # ── Obstacle detector ──
         TimerAction(period=7.0, actions=[
             Node(
                 package='buggy_brain',
                 executable='obstacle_detector',
                 name='obstacle_detector',
-                output='screen'
+                output='screen',
+                parameters=[sim_time]
             ),
         ]),
 
+        # ── State machine ──
         TimerAction(period=8.0, actions=[
             Node(
                 package='buggy_brain',
                 executable='state_machine',
                 name='state_machine',
-                output='screen'
+                output='screen',
+                parameters=[sim_time]
+            ),
+        ]),
+
+        # ── Crowd detector ──
+        TimerAction(period=9.0, actions=[
+            Node(
+                package='buggy_brain',
+                executable='crowd_detector',
+                name='crowd_detector',
+                output='screen',
+                parameters=[sim_time]
+            ),
+        ]),
+
+        # ── Ultrasonic monitor ──
+        TimerAction(period=9.0, actions=[
+            Node(
+                package='buggy_brain',
+                executable='ultrasonic_monitor',
+                name='ultrasonic_monitor',
+                output='screen',
+                parameters=[sim_time]
+            ),
+        ]),
+
+        # ── Demo visualizer ──
+        TimerAction(period=10.0, actions=[
+            Node(
+                package='buggy_brain',
+                executable='demo_visualizer',
+                name='demo_visualizer',
+                output='screen',
+                parameters=[sim_time]
             ),
         ]),
 
