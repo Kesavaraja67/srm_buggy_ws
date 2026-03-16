@@ -13,6 +13,7 @@ Real SRM Trichy campus — updated to match world v3.0:
 Plan Reference: §2.2 ODD Map
 """
 import heapq
+from typing import Dict, List, Tuple, Optional
 
 # ── §2.2 ODD — Named campus destinations ─────────────────────
 NODES = {
@@ -45,15 +46,18 @@ DESTINATION_DISPLAY = {
 }
 
 
-def find_shortest_path(graph: dict[str, list[tuple[str, float]]], start: str, goal: str) -> list[str]:
+def find_shortest_path(graph: Dict[str, List[Tuple[str, float]]], start: str, goal: str) -> List[str]:
     """
     Dijkstra shortest-path — §5.2 Path Planning.
     Returns ordered list of node names: start → ... → goal
     """
-    pq: list[tuple[float, str]] = [(0.0, start)]
-    distances: dict[str, float] = {n: float('inf') for n in graph}
+    if start not in graph or goal not in graph:
+        return []
+
+    pq: List[Tuple[float, str]] = [(0.0, start)]
+    distances: Dict[str, float] = {n: float('inf') for n in graph}
     distances[start] = 0.0
-    previous: dict[str, str | None] = {n: None for n in graph}
+    previous: Dict[str, Optional[str]] = {n: None for n in graph}
 
     while pq:
         cost, node = heapq.heappop(pq)
@@ -108,7 +112,7 @@ if __name__ == '__main__':
             )
             print(f"     Dist : {total_dist} m")
         else:
-            print(f"     Dist : 0.0 m")
+            print("     Dist : 0.0 m")
 
     print()
     print("✅ All tests passed." if all_ok else "❌ Tests FAILED — fix before integrating.")

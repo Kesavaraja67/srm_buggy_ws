@@ -2,8 +2,9 @@
 """
 full_system.launch.py  v2.0 — SRM Autonomous Buggy
 ────────────────────────────────────────────────────
-Launches everything: Gazebo + robot + state publishers + brain nodes.
+Launches Gazebo + robot + state publishers.
 Buggy spawns at BUGGY_HUB (0, 0) facing North (+Y toward SRM_IST).
+(Brain nodes are disabled by default; see lines 84-99 to enable them.)
 Team Alpha owns this file. §Day 5 integration point.
 """
 import os
@@ -11,7 +12,7 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, TimerAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import Command, LaunchConfiguration
+from launch.substitutions import Command, LaunchConfiguration, FindExecutable
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
@@ -24,7 +25,10 @@ def generate_launch_description():
 
     world_file        = os.path.join(bringup_pkg,     'worlds', 'srm_campus.world')
     xacro_file        = os.path.join(description_pkg, 'urdf',   'buggy_urdf.xacro')
-    robot_description = ParameterValue(Command(['xacro ', xacro_file]), value_type=str)
+    robot_description = ParameterValue(
+        Command([FindExecutable(name='xacro'), ' ', xacro_file]),
+        value_type=str
+    )
 
     # ── Launch arguments ──────────────────────────────────────
     declare_gui         = DeclareLaunchArgument('gui',         default_value='true')
@@ -63,22 +67,19 @@ def generate_launch_description():
         parameters=[{'use_sim_time': True}],
     )
 
-    # ── 3. Spawn at BUGGY_HUB (0,0) facing North — delayed 3 s
-    spawn_entity = TimerAction(
-        period=3.0,
-        actions=[Node(
-            package='gazebo_ros',
-            executable='spawn_entity.py',
-            arguments=[
-                '-topic', 'robot_description',
-                '-entity', entity_name,
-                '-x', '0.0',     # BUGGY_HUB X  §2.2
-                '-y', '0.0',     # BUGGY_HUB Y  §2.2
-                '-z', '0.425',   # wheel_radius + chassis clearance
-                '-Y', '1.5708',  # 90° yaw → facing North toward SRM_IST
-            ],
-            output='screen',
-        )]
+    # ── 3. Spawn at BUGGY_HUB (0,0) facing North
+    spawn_entity = Node(
+        package='gazebo_ros',
+        executable='spawn_entity.py',
+        arguments=[
+            '-topic', 'robot_description',
+            '-entity', entity_name,
+            '-x', '0.0',     # BUGGY_HUB X  §2.2
+            '-y', '0.0',     # BUGGY_HUB Y  §2.2
+            '-z', '0.425',   # wheel_radius + chassis clearance
+            '-Y', '1.5708',  # 90° yaw → facing North toward SRM_IST
+        ],
+        output='screen',
     )
 
     # ── 4. Brain nodes — uncomment when Team Bravo adds them ──
