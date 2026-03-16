@@ -1,61 +1,52 @@
+import pytest
 import sys
 import os
-
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'buggy_brain'))
+from map_graph import find_shortest_path, get_node_coordinates, get_path_coordinates
 
-from map_graph import find_shortest_path, get_node_coordinates, get_path_coordinates, EDGES, NODES
+def test_hub_to_ist():
+    path = find_shortest_path('BUGGY_HUB', 'SRM_IST')
+    assert path == ['BUGGY_HUB', 'SRM_IST']
 
+def test_hub_to_hosp():
+    path = find_shortest_path('BUGGY_HUB', 'SRM_HOSP')
+    assert path == ['BUGGY_HUB', 'SRM_HOSP']
 
-def test_main_gate_to_library():
-    path = find_shortest_path(EDGES, 'MAIN_GATE', 'LIBRARY')
-    assert path == ['MAIN_GATE', 'HUB', 'LIBRARY']
+def test_hub_to_temple():
+    path = find_shortest_path('BUGGY_HUB', 'SRM_TEMPLE')
+    assert path == ['BUGGY_HUB', 'SRM_TEMPLE']
 
+def test_ist_to_hosp_via_hub():
+    path = find_shortest_path('SRM_IST', 'SRM_HOSP')
+    assert path == ['SRM_IST', 'BUGGY_HUB', 'SRM_HOSP']
 
-def test_main_gate_to_admin():
-    path = find_shortest_path(EDGES, 'MAIN_GATE', 'ADMIN_BLOCK')
-    assert path == ['MAIN_GATE', 'HUB', 'ADMIN_BLOCK']
-
-
-def test_parking_to_canteen():
-    path = find_shortest_path(EDGES, 'PARKING', 'CANTEEN')
-    assert path == ['PARKING', 'MAIN_GATE', 'HUB', 'CANTEEN']
-
+def test_temple_to_hosp_via_hub():
+    path = find_shortest_path('SRM_TEMPLE', 'SRM_HOSP')
+    assert path == ['SRM_TEMPLE', 'BUGGY_HUB', 'SRM_HOSP']
 
 def test_same_start_and_goal():
-    path = find_shortest_path(EDGES, 'HUB', 'HUB')
-    assert path == ['HUB']
-
+    path = find_shortest_path('BUGGY_HUB', 'BUGGY_HUB')
+    assert path == ['BUGGY_HUB']
 
 def test_invalid_node_returns_empty():
-    path = find_shortest_path(EDGES, 'MAIN_GATE', 'NONEXISTENT')
+    path = find_shortest_path('INVALID', 'SRM_IST')
     assert path == []
 
-
-def test_all_nodes_reachable_from_main_gate():
-    for destination in NODES:
-        if destination == 'MAIN_GATE':
-            continue
-        path = find_shortest_path(EDGES, 'MAIN_GATE', destination)
-        assert len(path) > 0, f"No path found to {destination}"
-
+def test_all_nodes_reachable_from_hub():
+    for node in ['SRM_IST', 'SRM_HOSP', 'SRM_TEMPLE']:
+        path = find_shortest_path('BUGGY_HUB', node)
+        assert len(path) > 0
 
 def test_get_node_coordinates():
-    coords = get_node_coordinates('LIBRARY')
-    assert coords == (40.0, 0.0)
-
+    assert get_node_coordinates('BUGGY_HUB')  == (0, 0)
+    assert get_node_coordinates('SRM_IST')    == (0, 50)
+    assert get_node_coordinates('SRM_HOSP')   == (50, 0)
+    assert get_node_coordinates('SRM_TEMPLE') == (0, -50)
 
 def test_get_node_coordinates_invalid():
-    coords = get_node_coordinates('NOWHERE')
-    assert coords is None
-
+    assert get_node_coordinates('NOWHERE') is None
 
 def test_get_path_coordinates():
-    path = ['MAIN_GATE', 'HUB', 'LIBRARY']
+    path   = find_shortest_path('BUGGY_HUB', 'SRM_IST')
     coords = get_path_coordinates(path)
-    assert coords == [(-40.0, 0.0), (0.0, 0.0), (40.0, 0.0)]
-
-
-def test_path_is_reversible():
-    path_forward = find_shortest_path(EDGES, 'LIBRARY', 'PARKING')
-    path_reverse = find_shortest_path(EDGES, 'PARKING', 'LIBRARY')
-    assert path_forward == list(reversed(path_reverse))
+    assert coords == [(0, 0), (0, 50)]
