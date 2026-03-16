@@ -30,6 +30,8 @@ setup(
             'state_machine = buggy_brain.state_machine:main',
             'speed_controller = buggy_brain.speed_controller:main',
             'ultrasonic_monitor = buggy_brain.ultrasonic_monitor:main',
-        ],
+            'crowd_detector = buggy_brain.crowd_detector:main',  
+            'demo_visualizer = buggy_brain.demo_visualizer:main', 
+     ],
     },
 )
