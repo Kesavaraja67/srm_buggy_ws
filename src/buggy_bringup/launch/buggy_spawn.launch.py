@@ -41,7 +41,7 @@ def generate_launch_description():
             '-entity', 'srm_aquila_buggy',
             '-x', '-20.0',
             '-y', '0.0',
-            '-z', '0.6',        # raised higher so wheels clear ground
+            '-z', '0.425',      # chassis_z = wheel_radius + chassis_height/2 + 0.04
             '-Y', '0.0',
         ],
         output='screen',

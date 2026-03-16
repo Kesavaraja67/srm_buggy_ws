@@ -16,7 +16,9 @@
   <xacro:property name="chassis_length"  value="4.12"/>
   <xacro:property name="chassis_width"   value="1.20"/>
   <xacro:property name="chassis_height"  value="0.25"/>
-  <xacro:property name="chassis_z"       value="0.35"/>   <!-- ride height -->
+  <!-- chassis_z = wheel_radius + (chassis_height/2) + 0.04 = 0.26 + 0.125 + 0.04 = 0.425
+       This places the tire bottoms at z=0 (ground plane) so base_footprint is correct. -->
+  <xacro:property name="chassis_z"       value="0.425"/>   <!-- ride height -->
 
   <!-- Roof canopy -->
   <xacro:property name="roof_length"     value="3.20"/>
@@ -596,7 +598,7 @@
       <max_wheel_acceleration>5.0</max_wheel_acceleration>
       <publish_odom>true</publish_odom>
       <publish_odom_tf>true</publish_odom_tf>
-      <publish_wheel_tf>true</publish_wheel_tf>
+      <publish_wheel_tf>false</publish_wheel_tf>
       <odometry_frame>odom</odometry_frame>
       <robot_base_frame>base_footprint</robot_base_frame>
       <command_topic>cmd_vel</command_topic>

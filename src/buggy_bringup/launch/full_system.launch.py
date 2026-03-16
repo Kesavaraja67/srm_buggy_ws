@@ -6,9 +6,9 @@ Team Alpha owns this file. Brain nodes are added by Team Bravo.
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, TimerAction
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, TimerAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import Command
+from launch.substitutions import Command, LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
@@ -22,12 +22,27 @@ def generate_launch_description():
     xacro_file = os.path.join(description_pkg, 'urdf', 'buggy_urdf.xacro')
     robot_description = ParameterValue(Command(['xacro ', xacro_file]), value_type=str)
 
+    # ── Launch arguments ───────────────────────────────────────────────
+    declare_gui = DeclareLaunchArgument(
+        'gui',
+        default_value='true',
+        description='Set to false to run Gazebo headless (no render window)'
+    )
+    declare_verbose = DeclareLaunchArgument(
+        'verbose',
+        default_value='false',
+        description='Set to true for verbose Gazebo output'
+    )
+
+    gui     = LaunchConfiguration('gui')
+    verbose = LaunchConfiguration('verbose')
+
     # ── SECTION 1: Gazebo world ────────────────────────────────────────
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(gazebo_ros_pkg, 'launch', 'gazebo.launch.py')
         ),
-        launch_arguments={'world': world_file, 'gui': 'true', 'verbose': 'false'}.items(),
+        launch_arguments={'world': world_file, 'gui': gui, 'verbose': verbose}.items(),
     )
 
     # ── SECTION 2: Robot description ──────────────────────────────────
@@ -53,7 +68,7 @@ def generate_launch_description():
             arguments=[
                 '-topic', 'robot_description',
                 '-entity', 'srm_aquila_buggy',
-                '-x', '-20.0', '-y', '0.0', '-z', '0.6', '-Y', '0.0',
+                '-x', '-20.0', '-y', '0.0', '-z', '0.425', '-Y', '0.0',
             ],
             output='screen',
         )]
@@ -72,6 +87,8 @@ def generate_launch_description():
     # ]
 
     return LaunchDescription([
+        declare_gui,
+        declare_verbose,
         gazebo,
         robot_state_publisher,
         joint_state_publisher,

@@ -17,7 +17,7 @@
 
 After you finish all your work, your contributions live here:
 
-```
+```text
 srm_buggy_ws/src/
 ├── buggy_description/
 │   └── urdf/
@@ -196,7 +196,7 @@ ros2 run robot_state_publisher robot_state_publisher \
 
 # Terminal 3: spawn the buggy
 ros2 run gazebo_ros spawn_entity.py \
-  -topic robot_description -entity srm_aquila_buggy -x -20 -y 0 -z 0.35
+  -topic robot_description -entity srm_aquila_buggy -x -20 -y 0 -z 0.425
 ```
 
 ### Step 11 — Verify Day 1 success criterion
@@ -282,7 +282,7 @@ ros2 topic list | grep -E "scan|camera|imu|gps|ultrasonic|odom"
 ```
 
 **Expected — must see ALL of these:**
-```
+```text
 /camera/image_raw
 /gps/fix
 /imu/data
@@ -606,7 +606,7 @@ The URDF defines the robot (sensors, wheels, joints). The world file defines the
 Read the exact error message. It will say something like `Could not find package 'gazebo_ros'`. Run `sudo apt install ros-humble-gazebo-ros-pkgs` and rebuild.
 
 **Q: The buggy spawns but falls through the ground — what's wrong?**
-The `chassis_z` property in your XACRO is `0.35` (ride height). Spawn with `-z 0.35` to match. If you spawn at `z=0`, the wheels clip through the ground on the first physics tick.
+The `chassis_z` property in your XACRO is `0.425` (wheel_radius + chassis_height/2 + 0.04 = 0.26 + 0.125 + 0.04). Spawn with `-z 0.425` to match. If you spawn at `z=0`, the wheels clip through the ground on the first physics tick.
 
 **Q: How do I move the obstacle boxes in Gazebo to test obstacle detection?**
 In Gazebo, click **Edit** (top menu) → **Translation Mode**, then click an obstacle box to select it, then drag it onto a road in front of the buggy. You can also drag it off the road to test the resume behaviour.

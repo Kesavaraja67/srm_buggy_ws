@@ -16,6 +16,20 @@
     START → HUB  : 20 m along X-axis
     HUB   → B    : 20 m along X-axis (positive)
     HUB   → C    : 20 m along Y-axis (positive)
+
+  ─── gz-sim Migration Note ────────────────────────────────────────────
+  This file uses SDF version "1.6" and Gazebo Classic material scripts
+  (file://media/materials/scripts/gazebo.material). Gazebo Classic reached
+  end-of-life in January 2025. For Phase 1 SITL this is acceptable.
+
+  TODO (future phase): Migrate to gz-sim (Gazebo Harmonic+)
+    1. Upgrade SDF to version 1.10+ supported by gz-sim
+    2. Replace material script paths with gz-sim equivalents
+       (e.g., use PBR materials or the material_map plugin)
+    3. Update launch files to use ros_gz_bridge instead of gazebo_ros
+    4. Run the world under gz-sim and fix any visual/physics regressions
+    5. Test sensor topics still publish at expected rates
+  ──────────────────────────────────────────────────────────────────────
 -->
 <sdf version="1.6">
   <world name="srm_campus">
@@ -396,6 +410,9 @@
       <static>true</static>
       <pose>0 0 0.25 0 0 0</pose>
       <link name="link">
+        <collision name="collision">
+          <geometry><cylinder><radius>0.50</radius><length>0.05</length></cylinder></geometry>
+        </collision>
         <visual name="visual">
           <geometry><cylinder><radius>0.50</radius><length>0.05</length></cylinder></geometry>
           <material>
