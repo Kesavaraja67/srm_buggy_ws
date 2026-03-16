@@ -2,7 +2,6 @@ import os
 import xacro
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, ExecuteProcess, TimerAction
-from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 from ament_index_python.packages import get_package_share_directory
@@ -49,7 +48,12 @@ def generate_launch_description():
             arguments=[
                 '-entity', 'srm_buggy',
                 '-topic',  'robot_description',
-                '-x', '-38', '-y', '0', '-z', '0.5','-R','0','-P','0','-Y','0'
+                '-x', '-30',
+                '-y', '0',
+                '-z', '0.3',
+                '-R', '0',
+                '-P', '0',
+                '-Y', '3.14159'
             ]
         ),
 
