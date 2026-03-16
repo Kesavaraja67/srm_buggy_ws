@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """
-full_system.launch.py — SRM Autonomous Buggy
-Team Alpha owns this file. Brain nodes are added by Team Bravo.
+full_system.launch.py  v2.0 — SRM Autonomous Buggy
+────────────────────────────────────────────────────
+Launches everything: Gazebo + robot + state publishers + brain nodes.
+Buggy spawns at BUGGY_HUB (0, 0) facing North (+Y toward SRM_IST).
+Team Alpha owns this file. §Day 5 integration point.
 """
 import os
 from ament_index_python.packages import get_package_share_directory
@@ -12,44 +15,43 @@ from launch.substitutions import Command, LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
+
 def generate_launch_description():
 
     bringup_pkg     = get_package_share_directory('buggy_bringup')
     description_pkg = get_package_share_directory('buggy_description')
     gazebo_ros_pkg  = get_package_share_directory('gazebo_ros')
 
-    world_file = os.path.join(bringup_pkg, 'worlds', 'srm_campus.world')
-    xacro_file = os.path.join(description_pkg, 'urdf', 'buggy_urdf.xacro')
+    world_file        = os.path.join(bringup_pkg,     'worlds', 'srm_campus.world')
+    xacro_file        = os.path.join(description_pkg, 'urdf',   'buggy_urdf.xacro')
     robot_description = ParameterValue(Command(['xacro ', xacro_file]), value_type=str)
 
-    # ── Launch arguments ───────────────────────────────────────────────
-    declare_gui = DeclareLaunchArgument(
-        'gui',
-        default_value='true',
-        description='Set to false to run Gazebo headless (no render window)'
-    )
-    declare_verbose = DeclareLaunchArgument(
-        'verbose',
-        default_value='false',
-        description='Set to true for verbose Gazebo output'
-    )
-
+    # ── Launch arguments ──────────────────────────────────────
+    declare_gui     = DeclareLaunchArgument('gui',     default_value='true')
+    declare_verbose = DeclareLaunchArgument('verbose', default_value='false')
     gui     = LaunchConfiguration('gui')
     verbose = LaunchConfiguration('verbose')
 
-    # ── SECTION 1: Gazebo world ────────────────────────────────────────
+    # ── 1. Gazebo world ───────────────────────────────────────
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(gazebo_ros_pkg, 'launch', 'gazebo.launch.py')
         ),
-        launch_arguments={'world': world_file, 'gui': gui, 'verbose': verbose}.items(),
+        launch_arguments={
+            'world':   world_file,
+            'gui':     gui,
+            'verbose': verbose,
+        }.items(),
     )
 
-    # ── SECTION 2: Robot description ──────────────────────────────────
+    # ── 2. Robot description ──────────────────────────────────
     robot_state_publisher = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
-        parameters=[{'robot_description': robot_description}, {'use_sim_time': True}],
+        parameters=[
+            {'robot_description': robot_description},
+            {'use_sim_time': True},          # §Known Pitfalls — clock sync
+        ],
         output='screen',
     )
 
@@ -59,7 +61,7 @@ def generate_launch_description():
         parameters=[{'use_sim_time': True}],
     )
 
-    # ── SECTION 3: Spawn buggy (delayed 3s) ───────────────────────────
+    # ── 3. Spawn at BUGGY_HUB (0,0) facing North — delayed 3 s
     spawn_entity = TimerAction(
         period=3.0,
         actions=[Node(
@@ -68,22 +70,33 @@ def generate_launch_description():
             arguments=[
                 '-topic', 'robot_description',
                 '-entity', 'srm_aquila_buggy',
-                '-x', '-20.0', '-y', '0.0', '-z', '0.425', '-Y', '0.0',
+                '-x', '0.0',     # BUGGY_HUB X  §2.2
+                '-y', '0.0',     # BUGGY_HUB Y  §2.2
+                '-z', '0.425',   # wheel_radius + chassis clearance
+                '-Y', '1.5708',  # 90° yaw → facing North toward SRM_IST
             ],
             output='screen',
         )]
     )
 
-    # ── SECTION 4: BRAIN NODES — uncomment as Team Bravo adds them ────
+    # ── 4. Brain nodes — uncomment when Team Bravo adds them ──
     # brain_nodes = [
-    #     Node(package='buggy_brain', executable='path_planner_node',   parameters=[{'use_sim_time': True}], output='screen'),
-    #     Node(package='buggy_brain', executable='waypoint_follower',   parameters=[{'use_sim_time': True}], output='screen'),
-    #     Node(package='buggy_brain', executable='obstacle_detector',   parameters=[{'use_sim_time': True}], output='screen'),
-    #     Node(package='buggy_brain', executable='ultrasonic_monitor',  parameters=[{'use_sim_time': True}], output='screen'),
-    #     Node(package='buggy_brain', executable='state_machine',       parameters=[{'use_sim_time': True}], output='screen'),
-    #     Node(package='buggy_brain', executable='speed_controller',    parameters=[{'use_sim_time': True}], output='screen'),
-    #     Node(package='buggy_brain', executable='crowd_detector',      parameters=[{'use_sim_time': True}], output='screen'),
-    #     Node(package='buggy_brain', executable='demo_visualizer',     parameters=[{'use_sim_time': True}], output='screen'),
+    #     Node(package='buggy_brain', executable='path_planner_node',
+    #          parameters=[{'use_sim_time': True}], output='screen'),
+    #     Node(package='buggy_brain', executable='waypoint_follower',
+    #          parameters=[{'use_sim_time': True}], output='screen'),
+    #     Node(package='buggy_brain', executable='obstacle_detector',
+    #          parameters=[{'use_sim_time': True}], output='screen'),
+    #     Node(package='buggy_brain', executable='ultrasonic_monitor',
+    #          parameters=[{'use_sim_time': True}], output='screen'),
+    #     Node(package='buggy_brain', executable='state_machine',
+    #          parameters=[{'use_sim_time': True}], output='screen'),
+    #     Node(package='buggy_brain', executable='speed_controller',
+    #          parameters=[{'use_sim_time': True}], output='screen'),
+    #     Node(package='buggy_brain', executable='crowd_detector',
+    #          parameters=[{'use_sim_time': True}], output='screen'),
+    #     Node(package='buggy_brain', executable='demo_visualizer',
+    #          parameters=[{'use_sim_time': True}], output='screen'),
     # ]
 
     return LaunchDescription([
@@ -93,5 +106,5 @@ def generate_launch_description():
         robot_state_publisher,
         joint_state_publisher,
         spawn_entity,
-        # *brain_nodes,   # ← Team Bravo: uncomment this line on Day 5
+        # *brain_nodes,   # ← Team Bravo: uncomment on Day 5
     ])
