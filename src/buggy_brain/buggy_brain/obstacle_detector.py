@@ -20,9 +20,9 @@ class ObstacleDetector(Node):
 
         # --- Parameters ---
         # Distance thresholds in metres
-        self.stop_distance   = 2.0   # stop if obstacle closer than this
-        self.clear_distance  = 3.0   # resume only when obstacle beyond this
-        self.front_arc_deg   = 60.0  # degrees — only check front-facing arc
+        self.stop_distance   = 1.0   # stop if obstacle closer than this
+        self.clear_distance  = 1.5   # resume only when obstacle beyond this
+        self.front_arc_deg   = 30.0  # degrees — only check front-facing arc
 
         # --- State ---
         self.obstacle_present = False  # True when currently stopped for obstacle
