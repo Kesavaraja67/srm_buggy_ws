@@ -18,7 +18,7 @@
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 **SRM Institute of Science and Technology**  
-Department of Robotics and Automation Engineering  
+Department of Artificial Intelligence and Machine Learning  
 *Sprint: March 2026 · Phase 1 SITL · 6-Person Team*
 
 </div>
@@ -420,7 +420,7 @@ MINIMUM VIABLE DEMO — Phase 1 is a success if ALL 5 are true:
 
 | Item | Status |
 |------|--------|
-| `colcon build` passes with zero errors | `[ ]` |
+| `colcon build` passes with zero errors | `[]` |
 | All 5 sensor topics publishing at correct Hz | `[ ]` |
 | Gazebo campus world renders with road network | `[ ]` |
 | Dijkstra computes correct path for all 3 destinations | `[ ]` |
