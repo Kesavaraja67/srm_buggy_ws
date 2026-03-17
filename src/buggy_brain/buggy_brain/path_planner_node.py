@@ -22,7 +22,7 @@ class PathPlannerNode(Node):
 
         # Current start position — in a real system this comes from GPS/localisation
         # For SITL we default to MAIN_GATE
-        self.current_position = 'BUGGY_HUB'
+        self.current_position = 'SPAWN'
 
         # Subscriber — listens for destination commands
         self.goal_sub = self.create_subscription(

@@ -45,7 +45,7 @@ def generate_launch_description():
                          'use_sim_time': True}]
         ),
 
-        # ── Spawn buggy ──
+        # ── Spawn buggy at roundabout edge, clear of hub pillars ──
         Node(
             package='gazebo_ros',
             executable='spawn_entity.py',
@@ -54,14 +54,13 @@ def generate_launch_description():
             arguments=[
                 '-entity', 'srm_buggy',
                 '-topic',  'robot_description',
-                '-x', '-13',
+                '-x', '-9',
                 '-y', '0',
                 '-z', '0.15',
                 '-R', '0',
                 '-P', '0',
                 '-Y', '0.0'
             ]
-
         ),
 
         # ── Path planner ──

@@ -6,11 +6,13 @@ NODES = {
     'SRM_IST':    (  0.0,  50.0),
     'SRM_HOSP':   ( 50.0,   0.0),
     'SRM_TEMPLE': (  0.0, -50.0),
+    'SPAWN':      (-16.0,   0.0),
 }
 
 # Bidirectional edges with distances in metres
 EDGES = {
-    'BUGGY_HUB':  [('SRM_IST', 50), ('SRM_HOSP', 50), ('SRM_TEMPLE', 50)],
+    'SPAWN':      [('BUGGY_HUB', 16)],
+    'BUGGY_HUB':  [('SPAWN', 16), ('SRM_IST', 50), ('SRM_HOSP', 50), ('SRM_TEMPLE', 50)],
     'SRM_IST':    [('BUGGY_HUB', 50)],
     'SRM_HOSP':   [('BUGGY_HUB', 50)],
     'SRM_TEMPLE': [('BUGGY_HUB', 50)],
@@ -54,15 +56,16 @@ def get_path_coordinates(path):
 
 if __name__ == '__main__':
     tests = [
-        ('BUGGY_HUB',  'SRM_IST'),
-        ('BUGGY_HUB',  'SRM_HOSP'),
-        ('BUGGY_HUB',  'SRM_TEMPLE'),
+        ('SPAWN',      'SRM_IST'),
+        ('SPAWN',      'SRM_HOSP'),
+        ('SPAWN',      'SRM_TEMPLE'),
         ('SRM_IST',    'SRM_HOSP'),
         ('SRM_TEMPLE', 'SRM_HOSP'),
-        ('BUGGY_HUB',  'BUGGY_HUB'),
+        ('SPAWN',      'SPAWN'),
     ]
     for start, goal in tests:
         path = find_shortest_path(start, goal)
         coords = get_path_coordinates(path)
         print(f'{start} -> {goal}: {path}')
         print(f'  coords: {coords}')
+
