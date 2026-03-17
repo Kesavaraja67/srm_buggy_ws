@@ -51,8 +51,9 @@ def main(args=None):
         try:
             node.destroy_node()
             rclpy.shutdown()
-        except Exception:
-            pass
+        except Exception as e:
+            # Shutdown errors are usually benign (e.g., already shut down)
+            print(f'Shutdown warning (SensorStubNode): {e}')
 
 
 if __name__ == '__main__':

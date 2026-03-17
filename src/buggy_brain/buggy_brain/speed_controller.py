@@ -5,8 +5,11 @@ from rclpy.node import Node
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist
 
-MAX_LINEAR_SPEED = 4.17
 RESUME_RAMP_DUR  = 1.0
+
+from buggy_brain.state_machine import (
+    STATE_WAITING, STATE_NAVIGATING, STATE_RESUMING
+)
 
 class SpeedControllerNode(Node):
     def __init__(self):
@@ -14,17 +17,17 @@ class SpeedControllerNode(Node):
         self._cmd_pub = self.create_publisher(Twist, '/cmd_vel', 10)
         self.create_subscription(String, '/buggy_state',  self._state_cb,      10)
         self.create_subscription(Twist,  '/nav_cmd_vel',  self._nav_cmd_vel_cb, 10)
-        self._current_state     = 'WAITING_FOR_DESTINATION'
+        self._current_state     = STATE_WAITING
         self._nav_cmd           = Twist()
-        self._resume_start_time = 0.0
+        self._resume_start_time = self.get_clock().now()
         self.create_timer(0.1, self._control_loop)
         self.get_logger().info('SpeedControllerNode started. Only publisher of /cmd_vel.')
 
     def _state_cb(self, msg):
         prev = self._current_state
         self._current_state = msg.data
-        if self._current_state == 'RESUMING' and prev != 'RESUMING':
-            self._resume_start_time = time.monotonic()
+        if self._current_state == STATE_RESUMING and prev != STATE_RESUMING:
+            self._resume_start_time = self.get_clock().now()
 
     def _nav_cmd_vel_cb(self, msg):
         self._nav_cmd = msg
@@ -32,10 +35,10 @@ class SpeedControllerNode(Node):
     def _control_loop(self):
         out = Twist()
         s = self._current_state
-        if s == 'NAVIGATING':
+        if s == STATE_NAVIGATING:
             out = self._nav_cmd
-        elif s == 'RESUMING':
-            elapsed = time.monotonic() - self._resume_start_time
+        elif s == STATE_RESUMING:
+            elapsed = (self.get_clock().now() - self._resume_start_time).nanoseconds / 1e9
             ratio   = min(1.0, elapsed / RESUME_RAMP_DUR)
             out.linear.x  = self._nav_cmd.linear.x * ratio
             out.angular.z = self._nav_cmd.angular.z

@@ -129,8 +129,10 @@ class WaypointFollowerNode(Node):
         heading_error   = desired_heading - self._yaw
 
         # Normalise to [-π, π]
-        while heading_error >  math.pi: heading_error -= 2.0 * math.pi
-        while heading_error < -math.pi: heading_error += 2.0 * math.pi
+        while heading_error > math.pi:
+            heading_error -= 2.0 * math.pi
+        while heading_error < -math.pi:
+            heading_error += 2.0 * math.pi
 
         if abs(heading_error) < HEADING_DEADBAND:
             heading_error = 0.0
@@ -161,8 +163,9 @@ def main(args=None):
         try:
             node.destroy_node()
             rclpy.shutdown()
-        except Exception:
-            pass
+        except Exception as e:
+            # Shutdown errors are usually benign (e.g., already shut down)
+            print(f'Shutdown warning (WaypointFollowerNode): {e}')
 
 
 if __name__ == '__main__':

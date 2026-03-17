@@ -26,7 +26,7 @@ def generate_launch_description():
     world_file        = os.path.join(bringup_pkg,     'worlds', 'srm_campus.world')
     xacro_file        = os.path.join(description_pkg, 'urdf',   'buggy_urdf.xacro')
     robot_description = ParameterValue(
-        Command(['xacro ' + xacro_file]),
+        Command([FindExecutable(name='xacro'), ' ', xacro_file]),
         value_type=str
     )
 

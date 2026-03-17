@@ -9,7 +9,21 @@
 # ============================================================
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-cd "$SCRIPT_DIR"
+cd "$SCRIPT_DIR" || { echo "ERROR: Cannot cd to $SCRIPT_DIR"; exit 1; }
+
+# Function to cleanup background processes on exit
+cleanup() {
+    echo ""
+    echo "Cleaning up processes..."
+    # Kill the PIDs we stored
+    kill $SM_PID $SC_PID $WF_PID $OD_PID $STUB_PID $GAZEBO_PID 2>/dev/null || true
+    # Force kill any lingering gazebo parts
+    pkill -f gzserver 2>/dev/null || true
+    pkill -f gzclient 2>/dev/null || true
+}
+
+# Register cleanup for standard exit/interruption signals
+trap cleanup EXIT INT TERM
 
 echo "======================================"
 echo "  SRM Autonomous Buggy — SITL Demo"
@@ -85,7 +99,5 @@ ros2 run buggy_brain path_planner
 
 # ── Cleanup on exit ───────────────────────────────────────
 echo ""
-echo "Demo ended. Cleaning up..."
-kill $SM_PID $SC_PID $WF_PID $OD_PID $STUB_PID $GAZEBO_PID 2>/dev/null || true
-pkill -f gzserver 2>/dev/null || true
-pkill -f gzclient 2>/dev/null || true
+echo "Demo ended. Cleanup will be handled by trap."
+# kill commands removed - handled by cleanup() function

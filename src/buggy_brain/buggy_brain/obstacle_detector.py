@@ -46,8 +46,10 @@ class ObstacleDetectorNode(Node):
         for i in range(num_points):
             angle = msg.angle_min + i * angle_inc
             # Normalise angle to [-PI, PI]
-            while angle > math.pi: angle -= 2*math.pi
-            while angle < -math.pi: angle += 2*math.pi
+            while angle > math.pi:
+                angle -= 2 * math.pi
+            while angle < -math.pi:
+                angle += 2 * math.pi
             
             if abs(math.degrees(angle)) <= FRONT_ARC_DEG:
                 r = msg.ranges[i]
@@ -59,8 +61,11 @@ class ObstacleDetectorNode(Node):
         if front_points:
             current_cluster = [front_points[0]]
             for j in range(1, len(front_points)):
-                # If points are close in range and angle, same cluster
-                if abs(front_points[j]['r'] - front_points[j-1]['r']) < 0.5:
+                # If points are close in range AND angle, same cluster
+                range_diff = abs(front_points[j]['r'] - front_points[j-1]['r'])
+                angle_diff = abs(front_points[j]['angle'] - front_points[j-1]['angle'])
+                
+                if range_diff < 0.5 and angle_diff < 0.05:
                     current_cluster.append(front_points[j])
                 else:
                     clusters.append(current_cluster)
@@ -113,8 +118,9 @@ def main(args=None):
         try:
             node.destroy_node()
             rclpy.shutdown()
-        except Exception:
-            pass
+        except Exception as e:
+            # Shutdown errors are usually benign (e.g., already shut down)
+            print(f'Shutdown warning (ObstacleDetectorNode): {e}')
 
 if __name__ == '__main__':
     main()

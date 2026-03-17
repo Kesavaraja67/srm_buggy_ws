@@ -12,26 +12,8 @@ from std_msgs.msg import String
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
 from buggy_brain.map_graph import (
-    EDGES, NODES, DESTINATION_DISPLAY, find_shortest_path
-)
-
-VALID_DESTINATIONS = {
-    'A': 'SRM_IST',
-    'B': 'SRM_HOSP',
-    'C': 'SRM_TEMPLE',
-    'D': 'BUGGY_HUB',
-}
-
-MENU = (
-    "\n"
-    "========================================\n"
-    "  SRM Autonomous Campus Buggy\n"
-    "  Select Destination:\n"
-    "    (A) SRM Institute (North)\n"
-    "    (B) SRM Hospital (East)\n"
-    "    (C) SRM Campus Temple (South)\n"
-    "    (D) Buggy Hub (Base)\n"
-    "  Type a letter and press Enter: "
+    EDGES, NODES, DESTINATION_DISPLAY, find_shortest_path,
+    VALID_DESTINATIONS, MENU
 )
 
 
@@ -50,6 +32,7 @@ class PathPlannerNode(Node):
         self._navigating    = False
         self._last_path_nodes = []
         self._target_node: str | None = None
+        self._return_timer = None
 
         self.create_subscription(
             String, '/navigation_command', self._nav_cmd_callback, 10)
@@ -101,7 +84,7 @@ class PathPlannerNode(Node):
             return
 
         total_dist = sum(
-            next(w for neighbor, w in EDGES[path_nodes[i]] if neighbor == path_nodes[i + 1])
+            next((w for neighbor, w in EDGES.get(path_nodes[i], []) if neighbor == path_nodes[i + 1]), 0.0)
             for i in range(len(path_nodes) - 1)
         ) if len(path_nodes) > 1 else 0.0
         
@@ -138,8 +121,15 @@ class PathPlannerNode(Node):
             if old_target is not None and old_target != 'BUGGY_HUB':
                 print("  [PLANNER] MISSION COMPLETE. Returning to Buggy Hub automatically...")
                 self.get_logger().info('Destination reached. Returning to Hub.')
-                # Small delay to let terminal output breathe
-                threading.Timer(1.0, lambda: self._process_destination('D')).start()
+                
+                def safe_return():
+                    if rclpy.ok():
+                        self._process_destination('D')
+                
+                if self._return_timer:
+                    self._return_timer.cancel()
+                self._return_timer = threading.Timer(1.0, safe_return)
+                self._return_timer.start()
             else:
                 if old_target == 'BUGGY_HUB':
                     print("  [PLANNER] PARKED AT HUB. Select next destination:")
@@ -158,6 +148,7 @@ class PathPlannerNode(Node):
         for name in node_names:
             coords = NODES.get(name)
             if coords is None:
+                self.get_logger().warn(f'Unknown node "{name}" in path - skipping')
                 continue
             pose = PoseStamped()
             pose.header.stamp    = path_msg.header.stamp
@@ -170,6 +161,11 @@ class PathPlannerNode(Node):
 
         self._path_pub.publish(path_msg)
         self.get_logger().info(f'Published path: {" → ".join(node_names)}')
+
+    def destroy_node(self):
+        if self._return_timer:
+            self._return_timer.cancel()
+        super().destroy_node()
 
 
 def main(args=None):

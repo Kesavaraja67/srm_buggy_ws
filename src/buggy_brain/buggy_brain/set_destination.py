@@ -4,28 +4,11 @@ set_destination.py — Team Bravo interactive destination selector.
 Run this in a separate terminal while the buggy system is running:
     ros2 run buggy_brain set_destination
 """
+import time
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
-
-VALID_DESTINATIONS = {
-    'A': 'SRM_IST',
-    'B': 'SRM_HOSP',
-    'C': 'SRM_TEMPLE',
-    'D': 'BUGGY_HUB',
-}
-
-MENU = (
-    "\n"
-    "========================================\n"
-    "  SRM Autonomous Campus Buggy\n"
-    "  Select Destination:\n"
-    "    (A) SRM Institute (North)\n"
-    "    (B) SRM Hospital (East)\n"
-    "    (C) SRM Campus Temple (South)\n"
-    "    (D) Buggy Hub (Base)\n"
-    "  Type a letter and press Enter: "
-)
+from buggy_brain.map_graph import VALID_DESTINATIONS, MENU
 
 
 def main(args=None):
@@ -34,7 +17,6 @@ def main(args=None):
     pub = node.create_publisher(String, '/destination_request', 10)
 
     # Wait briefly for publisher to connect
-    import time
     time.sleep(1.0)
 
     print("\n[Destination CLI] Connected to buggy system.")

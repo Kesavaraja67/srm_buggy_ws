@@ -36,7 +36,7 @@ else
 fi
 
 echo ""
-echo "[4] Final check complete. To run full end-to-end integration tests, open 3 terminals:"
+echo "[4] Final check complete. To run full end-to-end integration tests, open 4 terminals:"
 echo "Terminal 1: ros2 run buggy_brain state_machine"
 echo "Terminal 2: ros2 run buggy_brain speed_controller"
 echo "Terminal 3: ros2 topic pub /obstacle_detected std_msgs/msg/Bool '{data: true}' -1"
