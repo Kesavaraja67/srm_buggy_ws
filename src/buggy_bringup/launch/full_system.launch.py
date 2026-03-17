@@ -67,7 +67,10 @@ def generate_launch_description():
         parameters=[{'use_sim_time': True}],
     )
 
-    # ── 3. Spawn inside shelter bay facing East (out of the bay)
+    # ── 3. Spawn at BUGGY_HUB parking bay (-11, 0) facing North
+    # NOTE: BUGGY_HUB roundabout island is at (0,0) with radius=4.5m
+    # Spawning at (0,0) puts the buggy INSIDE the island geometry!
+    # The hub parking bay/shelter is at x=-13. Spawn at x=-11 (bay entrance, on tarmac).
     spawn_entity = Node(
         package='gazebo_ros',
         executable='spawn_entity.py',
@@ -82,21 +85,21 @@ def generate_launch_description():
         output='screen',
     )
 
-    # ── 4. Brain nodes — uncomment when Team Bravo adds them ──
-    # brain_nodes = [
-    #     Node(package='buggy_brain', executable='path_planner',
-    #          parameters=[{'use_sim_time': True}], output='screen'),
-    #     Node(package='buggy_brain', executable='waypoint_follower',
-    #          parameters=[{'use_sim_time': True}], output='screen'),
-    #     Node(package='buggy_brain', executable='obstacle_detector',
-    #          parameters=[{'use_sim_time': True}], output='screen'),
-    #     Node(package='buggy_brain', executable='state_machine',
-    #          parameters=[{'use_sim_time': True}], output='screen'),
-    #     Node(package='buggy_brain', executable='speed_controller',
-    #          parameters=[{'use_sim_time': True}], output='screen'),
-    #     # TODO(Team Bravo): add console_scripts before enabling:
-    #     # ultrasonic_monitor, crowd_detector, demo_visualizer
-    # ]
+    # ── 4. Brain nodes — enabled for Team Bravo ──
+    brain_nodes = [
+        Node(package='buggy_brain', executable='path_planner',
+             parameters=[{'use_sim_time': True}], output='screen'),
+        Node(package='buggy_brain', executable='waypoint_follower',
+             parameters=[{'use_sim_time': True}], output='screen'),
+        Node(package='buggy_brain', executable='obstacle_detector',
+             parameters=[{'use_sim_time': True}], output='screen'),
+        Node(package='buggy_brain', executable='state_machine',
+             parameters=[{'use_sim_time': True}], output='screen'),
+        Node(package='buggy_brain', executable='speed_controller',
+             parameters=[{'use_sim_time': True}], output='screen'),
+        # TODO(Team Bravo): add console_scripts before enabling:
+        # ultrasonic_monitor, crowd_detector, demo_visualizer
+    ]
 
     return LaunchDescription([
         declare_gui,
@@ -106,5 +109,5 @@ def generate_launch_description():
         robot_state_publisher,
         joint_state_publisher,
         spawn_entity,
-        # *brain_nodes,   # ← Team Bravo: uncomment on Day 5
+        # *brain_nodes,   # ← Team Bravo: disabling here; launched by run_bravo_demo.sh instead
     ])

@@ -4,11 +4,11 @@ map_graph.py  v3.0
 ──────────────────────────────────────────────────────────────
 Campus road graph + Dijkstra for SRM Autonomous Buggy.
 
-Real SRM Trichy campus — updated to match world v3.0:
-  BUGGY_HUB  = (  0.0,   0.0)  ← Buggy home base / roundabout
-  SRM_IST    = (  0.0,  50.0)  ← SRM Institute   (North, 50 m)
-  SRM_HOSP   = ( 50.0,   0.0)  ← SRM Hospital    (East,  50 m)
-  SRM_TEMPLE = (  0.0, -50.0)  ← SRM Temple      (South, 50 m)
+Real SRM Trichy campus — alignment-matched coordinates:
+  BUGGY_HUB  = (-13.0,  0.0)  ← Alignment origin (Parking Bay)
+  SRM_IST    = (-12.0, 50.0)  ← North building
+  SRM_HOSP   = ( 50.0, 12.0)  ← East building
+  SRM_TEMPLE = (-12.0,-50.0)  ← South building
 
 Plan Reference: §2.2 ODD Map
 """
@@ -17,25 +17,34 @@ from typing import Dict, List, Tuple, Optional
 
 # ── §2.2 ODD — Named campus destinations ─────────────────────
 NODES = {
-    'BUGGY_HUB':  ( 0.0,   0.0),
-    'SRM_IST':    ( 0.0,  50.0),
-    'SRM_HOSP':   (50.0,   0.0),
-    'SRM_TEMPLE': ( 0.0, -50.0),
+    'BUGGY_HUB':  (-13.0,   0.0),
+    'SRM_IST':    (-12.0,  50.0),
+    'SRM_HOSP':   ( 50.0,  12.0),
+    'SRM_TEMPLE': (-12.0, -50.0),
+    'RND_N':      (  0.0,   8.0),
+    'RND_S':      (  0.0,  -8.0),
+    'RND_E':      (  8.0,   0.0),
+    'RND_W':      ( -8.0,   0.0),
 }
 
 # ── §2.2 — Road network (metres) ─────────────────────────────
 EDGES = {
-    'BUGGY_HUB':  [('SRM_IST', 50.0), ('SRM_HOSP', 50.0), ('SRM_TEMPLE', 50.0)],
-    'SRM_IST':    [('BUGGY_HUB', 50.0)],
-    'SRM_HOSP':   [('BUGGY_HUB', 50.0)],
-    'SRM_TEMPLE': [('BUGGY_HUB', 50.0)],
+    'BUGGY_HUB':  [('RND_W', 5.0)],
+    'SRM_IST':    [('RND_N', 42.0)],
+    'SRM_HOSP':   [('RND_E', 42.0)],
+    'SRM_TEMPLE': [('RND_S', 42.0)],
+    'RND_N':      [('SRM_IST', 42.0), ('RND_W', 12.0), ('RND_E', 12.0)],
+    'RND_S':      [('SRM_TEMPLE', 42.0), ('RND_W', 12.0), ('RND_E', 12.0)],
+    'RND_E':      [('SRM_HOSP', 42.0), ('RND_N', 12.0), ('RND_S', 12.0)],
+    'RND_W':      [('BUGGY_HUB', 5.0), ('RND_N', 12.0), ('RND_S', 12.0)],
 }
 
-# ── Terminal menu shown to user ───────────────────────────────
-DESTINATION_MENU = {
+# ── Terminal menu mapping ─────────────────────────────────────
+VALID_DESTINATIONS = {
     'A': 'SRM_IST',
     'B': 'SRM_HOSP',
     'C': 'SRM_TEMPLE',
+    'D': 'BUGGY_HUB',
 }
 
 DESTINATION_DISPLAY = {
@@ -44,6 +53,21 @@ DESTINATION_DISPLAY = {
     'SRM_TEMPLE': 'SRM Campus Temple (South)',
     'BUGGY_HUB':  'Buggy Hub — Home Base',
 }
+
+# ── Shared multi-line menu UI ────────────────────────────────
+MENU = (
+    "\n"
+    "========================================\n"
+    "  SRM Autonomous Buggy — Command Center\n"
+    "========================================\n"
+    "  [A] SRM Institute (North)\n"
+    "  [B] SRM Hospital (East)\n"
+    "  [C] SRM Temple (South)\n"
+    "  [D] Buggy Hub (Home)\n"
+    "  [Q] Emergency Shutdown\n"
+    "========================================\n"
+    "Select Destination: "
+)
 
 
 def find_shortest_path(graph: Dict[str, List[Tuple[str, float]]], start: str, goal: str) -> List[str]:
@@ -86,13 +110,13 @@ if __name__ == '__main__':
     print("=" * 60)
 
     tests = [
-        ('BUGGY_HUB', 'SRM_IST',    ['BUGGY_HUB', 'SRM_IST']),
-        ('BUGGY_HUB', 'SRM_HOSP',   ['BUGGY_HUB', 'SRM_HOSP']),
-        ('BUGGY_HUB', 'SRM_TEMPLE', ['BUGGY_HUB', 'SRM_TEMPLE']),
+        ('BUGGY_HUB', 'SRM_IST',    ['BUGGY_HUB', 'RND_W', 'RND_N', 'SRM_IST']),
+        ('BUGGY_HUB', 'SRM_HOSP',   ['BUGGY_HUB', 'RND_W', 'RND_N', 'RND_E', 'SRM_HOSP']),
+        ('BUGGY_HUB', 'SRM_TEMPLE', ['BUGGY_HUB', 'RND_W', 'RND_S', 'SRM_TEMPLE']),
         # Reverse paths
-        ('SRM_IST',    'BUGGY_HUB', ['SRM_IST', 'BUGGY_HUB']),
-        ('SRM_HOSP',   'BUGGY_HUB', ['SRM_HOSP', 'BUGGY_HUB']),
-        ('SRM_TEMPLE', 'BUGGY_HUB', ['SRM_TEMPLE', 'BUGGY_HUB']),
+        ('SRM_IST',    'BUGGY_HUB', ['SRM_IST', 'RND_N', 'RND_W', 'BUGGY_HUB']),
+        ('SRM_HOSP',   'BUGGY_HUB', ['SRM_HOSP', 'RND_E', 'RND_N', 'RND_W', 'BUGGY_HUB']),
+        ('SRM_TEMPLE', 'BUGGY_HUB', ['SRM_TEMPLE', 'RND_S', 'RND_W', 'BUGGY_HUB']),
     ]
 
     all_ok = True
