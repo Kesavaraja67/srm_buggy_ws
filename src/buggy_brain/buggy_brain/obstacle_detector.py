@@ -78,7 +78,8 @@ class ObstacleDetectorNode(Node):
 
         for cluster in clusters:
             # Estimate width
-            if len(cluster) < 1: continue
+            if not cluster:
+                continue
             
             # Simple width: r * dTheta
             avg_r = sum(p['r'] for p in cluster) / len(cluster)

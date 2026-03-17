@@ -33,6 +33,7 @@ class PathPlannerNode(Node):
         self._last_path_nodes = []
         self._target_node: str | None = None
         self._return_timer = None
+        self._lock = threading.Lock()
 
         self.create_subscription(
             String, '/navigation_command', self._nav_cmd_callback, 10)
@@ -68,77 +69,80 @@ class PathPlannerNode(Node):
                 self._process_destination(choice)
 
     def _process_destination(self, choice: str):
-        if choice not in VALID_DESTINATIONS:
-            print(f"  [INPUT] Invalid choice '{choice}'. Enter A, B, C, or D.")
-            return
+        with self._lock:
+            if choice not in VALID_DESTINATIONS:
+                print(f"  [INPUT] Invalid choice '{choice}'. Enter A, B, C, or D.")
+                return
 
-        if self._navigating:
-            print("  [INPUT] Already navigating. Wait for arrival.")
-            return
+            if self._navigating:
+                print("  [INPUT] Already navigating. Wait for arrival.")
+                return
 
-        target_node = VALID_DESTINATIONS[choice]
-        path_nodes = find_shortest_path(EDGES, self._current_start, target_node)
+            target_node = VALID_DESTINATIONS[choice]
+            path_nodes = find_shortest_path(EDGES, self._current_start, target_node)
 
-        if path_nodes is None or len(path_nodes) == 0:
-            print(f"  [PLANNER] ERROR: No path from {self._current_start} to {target_node}!")
-            return
+            if path_nodes is None or len(path_nodes) == 0:
+                print(f"  [PLANNER] ERROR: No path from {self._current_start} to {target_node}!")
+                return
 
-        total_dist = sum(
-            next((w for neighbor, w in EDGES.get(path_nodes[i], []) if neighbor == path_nodes[i + 1]), 0.0)
-            for i in range(len(path_nodes) - 1)
-        ) if len(path_nodes) > 1 else 0.0
-        
-        route_str = ' -> '.join(path_nodes)
-        print(f"\n  [PLANNER] Path: {route_str} ({total_dist:.0f} m). Navigating...\n")
-        self.get_logger().info(f'Path: {route_str}')
+            total_dist = sum(
+                next((w for neighbor, w in EDGES.get(path_nodes[i], []) if neighbor == path_nodes[i + 1]), 0.0)
+                for i in range(len(path_nodes) - 1)
+            ) if len(path_nodes) > 1 else 0.0
+            
+            route_str = ' -> '.join(path_nodes)
+            print(f"\n  [PLANNER] Path: {route_str} ({total_dist:.0f} m). Navigating...\n")
+            self.get_logger().info(f'Path: {route_str}')
 
-        # Publish path (excluding current start position if possible)
-        waypoints = path_nodes[1:] if len(path_nodes) > 1 else path_nodes
-        self._publish_path(waypoints)
-        self._last_path_nodes = waypoints
-        self._target_node = target_node
+            # Publish path (excluding current start position if possible)
+            waypoints = path_nodes[1:] if len(path_nodes) > 1 else path_nodes
+            self._publish_path(waypoints)
+            self._last_path_nodes = waypoints
+            self._target_node = target_node
 
-        nav_cmd = String()
-        nav_cmd.data = f'START:{target_node}'
-        self._cmd_pub.publish(nav_cmd)
-        self._navigating = True
+            nav_cmd = String()
+            nav_cmd.data = f'START:{target_node}'
+            self._cmd_pub.publish(nav_cmd)
+            self._navigating = True
 
     def _nav_cmd_callback(self, msg: String):
         # Match EXACT string to prevent accidental triggers
-        if msg.data == 'DESTINATION_REACHED' and self._navigating:
-            if self._target_node is not None:
-                target: str = self._target_node
-                self._current_start = target
-            
-            old_target = self._target_node
-            self._navigating = False
-            self._last_path_nodes = []
-            self._target_node = None # reset
-            
-            print(f"\n  [PLANNER] Reached {DESTINATION_DISPLAY.get(self._current_start, self._current_start)}.")
-            
-            # AUTOMATIC RETURN TO HUB
-            if old_target is not None and old_target != 'BUGGY_HUB':
-                print("  [PLANNER] MISSION COMPLETE. Returning to Buggy Hub automatically...")
-                self.get_logger().info('Destination reached. Returning to Hub.')
+        with self._lock:
+            if msg.data == 'DESTINATION_REACHED' and self._navigating:
+                if self._target_node is not None:
+                    target: str = self._target_node
+                    self._current_start = target
                 
-                def safe_return():
-                    if rclpy.ok():
-                        self._process_destination('D')
+                old_target = self._target_node
+                self._navigating = False
+                self._last_path_nodes = []
+                self._target_node = None # reset
                 
-                if self._return_timer:
-                    self._return_timer.cancel()
-                self._return_timer = threading.Timer(1.0, safe_return)
-                self._return_timer.start()
-            else:
-                if old_target == 'BUGGY_HUB':
-                    print("  [PLANNER] PARKED AT HUB. Select next destination:")
-                print(MENU, end='', flush=True)
+                print(f"\n  [PLANNER] Reached {DESTINATION_DISPLAY.get(self._current_start, self._current_start)}.")
+                
+                # AUTOMATIC RETURN TO HUB
+                if old_target is not None and old_target != 'BUGGY_HUB':
+                    print("  [PLANNER] MISSION COMPLETE. Returning to Buggy Hub automatically...")
+                    self.get_logger().info('Destination reached. Returning to Hub.')
+                    
+                    def safe_return():
+                        if rclpy.ok():
+                            self._process_destination('D')
+                    
+                    if self._return_timer:
+                        self._return_timer.cancel()
+                    self._return_timer = threading.Timer(1.0, safe_return)
+                    self._return_timer.start()
+                else:
+                    if old_target == 'BUGGY_HUB':
+                        print("  [PLANNER] PARKED AT HUB. Select next destination:")
+                    print(MENU, end='', flush=True)
 
     def _republish_path(self):
         """Re-send the current path every 2 s so late-starting nodes don't miss it."""
-        if self._navigating and self._last_path_nodes:
-            self._publish_path(self._last_path_nodes)
+        with self._lock:
+            if self._navigating and self._last_path_nodes:
+                self._publish_path(self._last_path_nodes)
 
     def _publish_path(self, node_names: list):
         path_msg = Path()

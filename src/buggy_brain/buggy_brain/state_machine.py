@@ -41,6 +41,7 @@ class StateMachineNode(Node):
         self._countdown_running  = False
         self._current_goal       = None
         self._state = STATE_WAITING
+        self._pending_state = None
 
         self.create_timer(1.0 / FSM_RATE_HZ, self._fsm_tick)
         self.get_logger().info('StateMachineNode started. State: WAITING_FOR_DESTINATION')
@@ -74,6 +75,11 @@ class StateMachineNode(Node):
             self._manual_cleared = True
 
     def _fsm_tick(self):
+        if self._pending_state is not None:
+            new_s = self._pending_state
+            self._pending_state = None
+            self._transition(new_s)
+
         s = self._state
         if s == STATE_WAITING:
             pass
@@ -127,7 +133,7 @@ class StateMachineNode(Node):
             time.sleep(1.0)
         print('[SAFETY] MANUAL_CONTROL active. Awaiting driver clearance.')
         self._countdown_running = False
-        self._transition(STATE_MANUAL)
+        self._pending_state = STATE_MANUAL
 
     def _publish_state(self):
         msg = String()

@@ -116,8 +116,6 @@ class WaypointFollowerNode(Node):
                 nav_msg.data = 'DESTINATION_REACHED'
                 self._nav_pub.publish(nav_msg)
                 self._waypoints = []
-                # Explicitly clear state to ensure terminal updates
-                self._buggy_state = 'WAITING_FOR_DESTINATION'
             return
 
         # Periodic log of progress

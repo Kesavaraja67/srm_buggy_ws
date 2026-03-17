@@ -5,10 +5,10 @@ map_graph.py  v3.0
 Campus road graph + Dijkstra for SRM Autonomous Buggy.
 
 Real SRM Trichy campus — alignment-matched coordinates:
-  BUGGY_HUB  = ( 0.0,  0.0)  ← Alignment origin
-  SRM_IST    = ( 1.0, 50.0)  ← North building
-  SRM_HOSP   = (63.0, 12.0)  ← East building
-  SRM_TEMPLE = ( 1.0,-50.0)  ← South building
+  BUGGY_HUB  = (-13.0,  0.0)  ← Alignment origin (Parking Bay)
+  SRM_IST    = (-12.0, 50.0)  ← North building
+  SRM_HOSP   = ( 50.0, 12.0)  ← East building
+  SRM_TEMPLE = (-12.0,-50.0)  ← South building
 
 Plan Reference: §2.2 ODD Map
 """
@@ -17,14 +17,14 @@ from typing import Dict, List, Tuple, Optional
 
 # ── §2.2 ODD — Named campus destinations ─────────────────────
 NODES = {
-    'BUGGY_HUB':  ( 0.0,   0.0),
-    'SRM_IST':    ( 1.0,  50.0),
-    'SRM_HOSP':   (63.0,  12.0),
-    'SRM_TEMPLE': ( 1.0, -50.0),
-    'RND_N':      (13.0,   8.0),
-    'RND_S':      (13.0,  -8.0),
-    'RND_E':      (21.0,   0.0),
-    'RND_W':      ( 5.0,   0.0),
+    'BUGGY_HUB':  (-13.0,   0.0),
+    'SRM_IST':    (-12.0,  50.0),
+    'SRM_HOSP':   ( 50.0,  12.0),
+    'SRM_TEMPLE': (-12.0, -50.0),
+    'RND_N':      (  0.0,   8.0),
+    'RND_S':      (  0.0,  -8.0),
+    'RND_E':      (  8.0,   0.0),
+    'RND_W':      ( -8.0,   0.0),
 }
 
 # ── §2.2 — Road network (metres) ─────────────────────────────
