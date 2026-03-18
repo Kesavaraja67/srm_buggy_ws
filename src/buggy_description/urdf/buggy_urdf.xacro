@@ -635,7 +635,7 @@
         <inertia ixx="0.4" ixy="0" ixz="0" iyy="0.4" iyz="0" izz="0.7"/>
       </inertial>
     </link>
-    <gazebo reference="${name}"><mu1>1.0</mu1><mu2>1.0</mu2><kp>1e6</kp><kd>100</kd><material>Gazebo/Black</material></gazebo>
+<gazebo reference="${name}"><mu1>5.0</mu1><mu2>5.0</mu2><kp>1e7</kp><kd>1</kd><minDepth>0.001</minDepth><maxVel>0.1</maxVel><material>Gazebo/Black</material></gazebo>
   </xacro:macro>
 
   <xacro:wheel name="wfl" px=" 1.30" py=" 0.55" side=" 1"/>
