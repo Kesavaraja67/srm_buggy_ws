@@ -18,7 +18,7 @@
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 **SRM Institute of Science and Technology**  
-Department of Robotics and Automation Engineering  
+Department of Artificial Intelligence and Machine Learning  
 *Sprint: March 2026 · Phase 1 SITL · 6-Person Team*
 
 </div>
@@ -243,33 +243,33 @@ srm_buggy_ws/
 
 ## 🗺️ Campus Map
 
-```
-Admin Block (C)
-     │
-     │  20 m
-     │
-    HUB ──────────────── Library Block (B)
-(0, 0)       20 m              (20, 0)
-     │
-     │  20 m
-     │
-  START / Main Gate (A)
-   (-20, 0)
+```text
+  SRM Institute (A)
+       (0, 50)
+          │
+          │  50 m
+          │
+    BUGGY_HUB ──────────────── SRM Hospital (B)
+     (0, 0)        50 m            (50, 0)
+          │
+          │  50 m
+          │
+    SRM Temple (C)
+      (0, -50)
 ```
 
 | Node | Gazebo Coordinates | Destination Letter |
 |------|-------------------|--------------------|
-| **START** | `(-20.0, 0.0)` | — |
-| **HUB** | `(0.0, 0.0)` | — |
-| **Main Gate (A)** | `(-20.0, 0.0)` | `A` |
-| **Library Block (B)** | `(20.0, 0.0)` | `B` |
-| **Admin Block (C)** | `(0.0, 20.0)` | `C` |
+| **BUGGY_HUB** | `(0.0, 0.0)` | — |
+| **SRM Institute (A)** | `(0.0, 50.0)` | `A` |
+| **SRM Hospital (B)** | `(50.0, 0.0)` | `B` |
+| **SRM Temple (C)** | `(0.0, -50.0)` | `C` |
 
 **Dijkstra Sample Output:**
-```
-START → B :  START  →  HUB  →  B   (40 m)
-START → C :  START  →  HUB  →  C   (40 m)
-START → A :  START  →  A         (0 m, same node)
+```text
+BUGGY_HUB → A :  BUGGY_HUB  →  SRM_IST     (50.0 m)
+BUGGY_HUB → B :  BUGGY_HUB  →  SRM_HOSP    (50.0 m)
+BUGGY_HUB → C :  BUGGY_HUB  →  SRM_TEMPLE  (50.0 m)
 ```
 
 ---
@@ -420,23 +420,23 @@ MINIMUM VIABLE DEMO — Phase 1 is a success if ALL 5 are true:
 
 | Item | Status |
 |------|--------|
-| `colcon build` passes with zero errors | `[ ]` |
-| All 5 sensor topics publishing at correct Hz | `[ ]` |
-| Gazebo campus world renders with road network | `[ ]` |
-| Dijkstra computes correct path for all 3 destinations | `[ ]` |
-| Buggy navigates START → B autonomously | `[ ]` |
-| Buggy navigates START → C autonomously | `[ ]` |
-| Emergency stop triggers at 1.5 m | `[ ]` |
-| Buggy resumes after 5 clear LiDAR readings | `[ ]` |
+| `colcon build` passes with zero errors | `[x]` |
+| All 5 sensor topics publishing at correct Hz | `[x]` |
+| Gazebo campus world renders with road network | `[x]` |
+| Dijkstra computes correct path for all 3 destinations | `[x]` |
+| Buggy navigates START → B autonomously | `[x]` |
+| Buggy navigates START → C autonomously | `[x]` |
+| Emergency stop triggers at 1.5 m | `[x]` |
+| Buggy resumes after 5 clear LiDAR readings | `[x]` |
 | Ultrasonic alert triggers at 0.30 m | `[ ]` |
 | Crowd detection triggers with 40+ LiDAR rays | `[ ]` |
 | MANUAL_CONTROL entered after countdown | `[ ]` |
-| Arrival announcement printed in terminal | `[ ]` |
-| System accepts new destination after arrival | `[ ]` |
+| Arrival announcement printed in terminal | `[x]` |
+| System accepts new destination after arrival | `[x]` |
 | RViz2 shows: model, pointcloud, camera, markers | `[ ]` |
-| `run_demo.sh` launches everything in one command | `[ ]` |
+| `run_demo.sh` launches everything in one command | `[x]` |
 | 8/10 stress test runs pass | `[ ]` |
-| GitHub repository pushed with README + traceability | `[ ]` |
+| GitHub repository pushed with README + traceability | `[x]` |
 | RQT node graph screenshot saved to `docs/` | `[ ]` |
 
 ---

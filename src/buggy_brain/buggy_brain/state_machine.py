@@ -1,205 +1,160 @@
+#!/usr/bin/env python3
+import time
+import threading
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String
+from std_msgs.msg import Bool, String
+
+STATE_WAITING    = 'WAITING_FOR_DESTINATION'
+STATE_NAVIGATING = 'NAVIGATING'
+STATE_ESTOP      = 'EMERGENCY_STOP'
+STATE_RESUMING   = 'RESUMING'
+STATE_CROWD      = 'CROWD_DETECTED'
+STATE_MANUAL     = 'MANUAL_CONTROL'
+STATE_ARRIVED    = 'DESTINATION_REACHED'
+
+CLEAR_NEEDED      = 5
+DETECT_NEEDED     = 3
+RESUMING_DELAY_S  = 0.5
+CROWD_COUNTDOWN_S = 3
+FSM_RATE_HZ       = 10
 
 
-class StateMachine(Node):
-    """
-    ROS 2 node that manages overall buggy behaviour state.
-
-    States:
-        WAITING_FOR_DESTINATION  — system ready, no goal yet
-        PLANNING                 — path planner computing route
-        NAVIGATING               — buggy driving toward destination
-        EMERGENCY_STOP           — obstacle detected, halted
-        RESUMING                 — obstacle cleared, resuming
-        CROWD_DETECTED           — crowd in path, driver takeover
-        MANUAL_CONTROL           — human driver in control
-        DESTINATION_REACHED      — arrived at goal
-        ERROR                    — something went wrong
-
-    Subscribes : /goal_destination  (std_msgs/String)
-                 /planning_status   (std_msgs/String)
-                 /waypoint_status   (std_msgs/String)
-                 /safety_status     (std_msgs/String)
-                 /crowd_detected    (std_msgs/String)
-    Publishes  : /buggy_state       (std_msgs/String)
-                 /driver_alert      (std_msgs/String)
-    """
-
-    WAITING_FOR_DESTINATION = 'WAITING_FOR_DESTINATION'
-    PLANNING                = 'PLANNING'
-    NAVIGATING              = 'NAVIGATING'
-    EMERGENCY_STOP          = 'EMERGENCY_STOP'
-    RESUMING                = 'RESUMING'
-    CROWD_DETECTED          = 'CROWD_DETECTED'
-    MANUAL_CONTROL          = 'MANUAL_CONTROL'
-    DESTINATION_REACHED     = 'DESTINATION_REACHED'
-    ERROR                   = 'ERROR'
+class StateMachineNode(Node):
 
     def __init__(self):
-        super().__init__('state_machine')
+        super().__init__('state_machine_node')
+        self._state_pub = self.create_publisher(String, '/buggy_state', 10)
+        self.create_subscription(Bool,   '/obstacle_detected',  self._obstacle_cb,   10)
+        self.create_subscription(Bool,   '/ultrasonic_alert',   self._ultrasonic_cb, 10)
+        self.create_subscription(Bool,   '/crowd_detected',     self._crowd_cb,      10)
+        self.create_subscription(String, '/navigation_command', self._nav_cmd_cb,    10)
+        self.create_subscription(Bool,   '/manual_override',    self._manual_cb,     10)
 
-        self.state          = self.WAITING_FOR_DESTINATION
-        self.previous_state = None
-        self.current_goal   = None
+        self._obstacle_detected  = False
+        self._ultrasonic_alert   = False
+        self._crowd_detected     = False
+        self._manual_cleared     = False
+        self._consecutive_detections = 0
+        self._consecutive_clears     = 0
+        self._resuming_start     = None
+        self._countdown_running  = False
+        self._current_goal       = None
+        self._state = STATE_WAITING
+        self._pending_state = None
 
-        # --- Subscribers ---
-        self.create_subscription(
-            String, '/goal_destination',
-            self.goal_callback, 10)
+        self.create_timer(1.0 / FSM_RATE_HZ, self._fsm_tick)
+        self.get_logger().info('StateMachineNode started. State: WAITING_FOR_DESTINATION')
 
-        self.create_subscription(
-            String, '/planning_status',
-            self.planning_callback, 10)
+    def _obstacle_cb(self, msg):
+        if msg.data:
+            self._consecutive_detections += 1
+            self._consecutive_clears = 0
+        else:
+            self._consecutive_clears += 1
+            self._consecutive_detections = 0
+        self._obstacle_detected = msg.data
 
-        self.create_subscription(
-            String, '/waypoint_status',
-            self.waypoint_callback, 10)
+    def _ultrasonic_cb(self, msg):
+        self._ultrasonic_alert = msg.data
 
-        self.create_subscription(
-            String, '/safety_status',
-            self.safety_callback, 10)
+    def _crowd_cb(self, msg):
+        self._crowd_detected = msg.data
 
-        self.create_subscription(
-            String, '/crowd_detected',
-            self.crowd_callback, 10)
+    def _nav_cmd_cb(self, msg):
+        if msg.data.startswith('START:'):
+            self._current_goal = msg.data.split(':')[1]
+            if self._state in (STATE_WAITING, STATE_ARRIVED):
+                self._transition(STATE_NAVIGATING)
+        elif msg.data == 'DESTINATION_REACHED':
+            if self._state in (STATE_NAVIGATING, STATE_RESUMING):
+                self._transition(STATE_ARRIVED)
 
-        self.create_subscription(
-            String, '/manual_override',
-            self.manual_callback, 10)
+    def _manual_cb(self, msg):
+        if not msg.data:
+            self._manual_cleared = True
 
-        # --- Publishers ---
-        self.state_pub  = self.create_publisher(String, '/buggy_state',    10)
-        self.alert_pub  = self.create_publisher(String, '/driver_alert',   10)
+    def _fsm_tick(self):
+        if self._pending_state is not None:
+            new_s = self._pending_state
+            self._pending_state = None
+            self._transition(new_s)
 
-        # --- Status timer: publish state at 1 Hz ---
-        self.create_timer(1.0, self.publish_state)
-
-        self.get_logger().info(
-            f'State machine started — state: {self.state}')
-
-    # ------------------------------------------------------------------
-    def goal_callback(self, msg):
-        """New destination received."""
-        if self.state in [
-            self.WAITING_FOR_DESTINATION,
-            self.DESTINATION_REACHED,
-            self.ERROR
-        ]:
-            self.current_goal = msg.data.strip().upper()
-            self.get_logger().info(f'New goal: {self.current_goal}')
-            self._transition(self.PLANNING)
-
-    def planning_callback(self, msg):
-        """Path planner status updates."""
-        if msg.data.startswith('PLANNING:'):
-            self._transition(self.NAVIGATING)
-        elif msg.data.startswith('ERROR:'):
-            self.get_logger().error(f'Planner error: {msg.data}')
-            self._publish_alert(f'PLANNING FAILED: {msg.data}')
-            self._transition(self.ERROR)
-        elif msg.data.startswith('Already at'):
-            self._transition(self.DESTINATION_REACHED)
-
-    def waypoint_callback(self, msg):
-        """Waypoint follower status updates."""
-        if msg.data == 'MISSION_COMPLETE':
-            self.get_logger().info(
-                f'Arrived at {self.current_goal}')
-            self._publish_alert(
-                f'ARRIVED: {self.current_goal}')
-            self._transition(self.DESTINATION_REACHED)
-        elif msg.data.startswith('WAYPOINT_'):
-            self.get_logger().info(f'Progress: {msg.data}')
-
-    def safety_callback(self, msg):
-        """Obstacle safety signals."""
-        if msg.data == 'STOP':
-            if self.state == self.NAVIGATING:
-                self._publish_alert('OBSTACLE DETECTED — emergency stop')
-                self._transition(self.EMERGENCY_STOP)
-
-        elif msg.data == 'CLEAR':
-            if self.state == self.EMERGENCY_STOP:
-                self._publish_alert('Obstacle cleared — resuming')
-                self._transition(self.RESUMING)
-                # Auto transition to NAVIGATING after brief resume
-                self.create_timer(2.0, self._resume_navigation)
-
-    def crowd_callback(self, msg):
-        """Crowd detection signals."""
-        if msg.data == 'CROWD_DETECTED':
-            if self.state in [self.NAVIGATING, self.EMERGENCY_STOP]:
-                self.get_logger().warn(
-                    'Crowd detected — switching to manual control')
-                self._publish_alert(
-                    'CROWD DETECTED — driver takeover required')
-                self._transition(self.CROWD_DETECTED)
-                self.create_timer(1.0, self._enter_manual_control)
-
-        elif msg.data == 'CROWD_CLEARED':
-            if self.state == self.MANUAL_CONTROL:
-                self.get_logger().info(
-                    'Crowd cleared — returning to autonomous')
-                self._publish_alert('Crowd cleared — resuming autonomous')
-                self._transition(self.NAVIGATING)
-
-    def manual_callback(self, msg):
-        """Manual override signals."""
-        if msg.data == 'ENGAGE':
-            self._transition(self.MANUAL_CONTROL)
-            self._publish_alert('Manual control engaged')
-        elif msg.data == 'DISENGAGE':
-            if self.state == self.MANUAL_CONTROL:
-                self._transition(self.NAVIGATING)
-                self._publish_alert('Autonomous control resumed')
-
-    # ------------------------------------------------------------------
-    def _resume_navigation(self):
-        """Called 2 seconds after RESUMING to go back to NAVIGATING."""
-        if self.state == self.RESUMING:
-            self._transition(self.NAVIGATING)
-
-    def _enter_manual_control(self):
-        """Called 1 second after CROWD_DETECTED."""
-        if self.state == self.CROWD_DETECTED:
-            self._transition(self.MANUAL_CONTROL)
+        s = self._state
+        if s == STATE_WAITING:
+            pass
+        elif s == STATE_NAVIGATING:
+            if self._ultrasonic_alert:
+                self._transition(STATE_ESTOP)
+            elif self._consecutive_detections >= DETECT_NEEDED:
+                self._transition(STATE_ESTOP)
+            elif self._crowd_detected and not self._countdown_running:
+                self._transition(STATE_CROWD)
+        elif s == STATE_ESTOP:
+            if not self._ultrasonic_alert and self._consecutive_clears >= CLEAR_NEEDED:
+                self._transition(STATE_RESUMING)
+        elif s == STATE_RESUMING:
+            if self._resuming_start is None:
+                self._resuming_start = time.monotonic()
+            elif time.monotonic() - self._resuming_start >= RESUMING_DELAY_S:
+                self._resuming_start = None
+                self._transition(STATE_NAVIGATING)
+        elif s == STATE_CROWD:
+            pass
+        elif s == STATE_MANUAL:
+            if self._manual_cleared:
+                self._manual_cleared = False
+                self._transition(STATE_NAVIGATING)
+        elif s == STATE_ARRIVED:
+            pass
+        self._publish_state()
 
     def _transition(self, new_state):
-        """Perform a state transition with logging."""
-        if new_state == self.state:
+        if new_state == self._state:
             return
-        self.get_logger().info(
-            f'State: {self.state} --> {new_state}')
-        self.previous_state = self.state
-        self.state          = new_state
-        self.publish_state()
+        self.get_logger().info(f'[STATE] {self._state} -> {new_state}')
+        print(f'\n[STATE MACHINE] {self._state} -> {new_state}')
+        self._state = new_state
+        if new_state == STATE_ESTOP:
+            self._consecutive_clears = 0
+        elif new_state == STATE_CROWD and not self._countdown_running:
+            threading.Thread(target=self._crowd_countdown, daemon=True).start()
+        elif new_state == STATE_ARRIVED:
+            goal = self._current_goal or '?'
+            print(f'[NAVIGATION] Arrived at {goal}.')
+            self._publish_state()
+            self._transition(STATE_WAITING)
 
-    def publish_state(self):
-        """Publish current state to /buggy_state."""
-        msg      = String()
-        msg.data = self.state
-        self.state_pub.publish(msg)
+    def _crowd_countdown(self):
+        self._countdown_running = True
+        print('\n[STATE MACHINE] CROWD DETECTED - Requesting driver takeover')
+        for i in range(CROWD_COUNTDOWN_S, 0, -1):
+            print(f'[SAFETY] Handing control to driver in {i}...')
+            time.sleep(1.0)
+        print('[SAFETY] MANUAL_CONTROL active. Awaiting driver clearance.')
+        self._countdown_running = False
+        self._pending_state = STATE_MANUAL
 
-    def _publish_alert(self, text):
-        """Publish driver alert message."""
-        msg      = String()
-        msg.data = text
-        self.alert_pub.publish(msg)
-        self.get_logger().info(f'ALERT: {text}')
+    def _publish_state(self):
+        msg = String()
+        msg.data = self._state
+        self._state_pub.publish(msg)
 
 
 def main(args=None):
     rclpy.init(args=args)
-    node = StateMachine()
+    node = StateMachineNode()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
     finally:
-        node.destroy_node()
-        rclpy.shutdown()
+        try:
+            node.destroy_node()
+            rclpy.shutdown()
+        except Exception as e:
+            # Shutdown errors are usually benign (e.g., already shut down)
+            print(f'Shutdown warning (StateMachineNode): {e}')
 
 
 if __name__ == '__main__':

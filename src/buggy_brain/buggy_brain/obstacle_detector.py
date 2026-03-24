@@ -1,129 +1,127 @@
+#!/usr/bin/env python3
+"""
+obstacle_detector.py  —  Team Bravo (v3)
+-----------------------------------------
+Processes /scan (LaserScan) to detect:
+1. Wide objects (Cylinders/Blocks) -> STOP (/obstacle_detected = True)
+2. Narrow objects (Trees/Lights)     -> AVOID (/avoidance_steering offset)
+
+Algorithm:
+- Segment Lidar points in front arc (±30 degrees).
+- Group consecutive hits into clusters.
+- If a cluster is wider than WIDTH_THRESHOLD -> STOP.
+- If a cluster is narrow -> ADJUST steering to nudge away.
+"""
+import math
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import LaserScan
-from std_msgs.msg import String
-import math
+from std_msgs.msg import Bool, Float32
 
+# Thresholds
+FRONT_ARC_DEG = 25.0   # Narrowed arc to avoid seeing walls/pillars
+STOP_DIST     = 2.2    # Metres - closer stop threshold
+AVOID_DIST    = 4.0    # Metres - start nudging sooner
+WIDTH_THR     = 0.4    # Metres - clusters wider than this are STOP objects
+STEER_GAIN    = 0.8    # Rad/s steering offset per degree of avoidance
 
-class ObstacleDetector(Node):
-    """
-    ROS 2 node that monitors LiDAR scan data and publishes
-    safety stop/clear commands based on obstacle proximity.
-
-    Subscribes : /scan           (sensor_msgs/LaserScan)
-    Publishes  : /safety_status  (std_msgs/String)
-                 /obstacle_info  (std_msgs/String)
-    """
-
+class ObstacleDetectorNode(Node):
     def __init__(self):
-        super().__init__('obstacle_detector')
+        super().__init__('obstacle_detector_node')
 
-        # --- Parameters ---
-        # Distance thresholds in metres
-        self.stop_distance   = 1.5   # stop if obstacle closer than this
-        self.clear_distance  = 2.0   # resume only when obstacle beyond this
-        self.front_arc_deg   = 30.0  # degrees — only check front-facing arc
+        self.create_subscription(LaserScan, '/scan', self._scan_callback, 10)
+        self._stop_pub  = self.create_publisher(Bool, '/obstacle_detected', 10)
+        self._steer_pub = self.create_publisher(Float32, '/avoidance_steering', 10)
 
-        # --- State ---
-        self.obstacle_present = False  # True when currently stopped for obstacle
+        self.get_logger().info('ObstacleDetectorNode v3 started (Intelligent Avoidance).')
 
-        # --- Subscriber ---
-        self.scan_sub = self.create_subscription(
-            LaserScan,
-            '/scan',
-            self.scan_callback,
-            10
-        )
+    def _scan_callback(self, msg: LaserScan):
+        # 1. Extract front arc points
+        # Assuming 0 is front, angles -PI to PI
+        num_points = len(msg.ranges)
+        angle_inc  = msg.angle_increment
+        
+        # Ranges in front arc
+        front_points = []
+        for i in range(num_points):
+            angle = msg.angle_min + i * angle_inc
+            # Normalise angle to [-PI, PI]
+            while angle > math.pi:
+                angle -= 2 * math.pi
+            while angle < -math.pi:
+                angle += 2 * math.pi
+            
+            if abs(math.degrees(angle)) <= FRONT_ARC_DEG:
+                r = msg.ranges[i]
+                if msg.range_min < r < AVOID_DIST:
+                    front_points.append({'r': r, 'angle': angle})
 
-        # --- Publishers ---
-        self.safety_pub   = self.create_publisher(String, '/safety_status', 10)
-        self.obstacle_pub = self.create_publisher(String, '/obstacle_info', 10)
+        # 2. Simple clustering
+        clusters = []
+        if front_points:
+            current_cluster = [front_points[0]]
+            for j in range(1, len(front_points)):
+                # If points are close in range AND angle, same cluster
+                range_diff = abs(front_points[j]['r'] - front_points[j-1]['r'])
+                angle_diff = abs(front_points[j]['angle'] - front_points[j-1]['angle'])
+                
+                if range_diff < 0.5 and angle_diff < 0.05:
+                    current_cluster.append(front_points[j])
+                else:
+                    clusters.append(current_cluster)
+                    current_cluster = [front_points[j]]
+            clusters.append(current_cluster)
 
-        self.get_logger().info('Obstacle detector started.')
-        self.get_logger().info(
-            f'Stop threshold: {self.stop_distance}m | '
-            f'Clear threshold: {self.clear_distance}m | '
-            f'Front arc: ±{self.front_arc_deg/2:.0f}°'
-        )
+        # 3. Analyze clusters
+        should_stop = False
+        steer_offset = 0.0
 
-    def scan_callback(self, msg):
-        """Process each LiDAR scan and publish safety commands."""
-        min_distance = self._get_min_front_distance(msg)
+        for cluster in clusters:
+            # Estimate width
+            if not cluster:
+                continue
+            
+            # Simple width: r * dTheta
+            avg_r = sum(p['r'] for p in cluster) / len(cluster)
+            angle_span = abs(cluster[-1]['angle'] - cluster[0]['angle'])
+            width = avg_r * angle_span
 
-        if min_distance is None:
-            return
+            # Stop logic
+            if avg_r < STOP_DIST and width > WIDTH_THR:
+                should_stop = True
+                break
+            
+            # Avoid logic (if not stopping)
+            if avg_r < AVOID_DIST and width <= WIDTH_THR:
+                # Nudge away from the object
+                avg_angle = sum(p['angle'] for p in cluster) / len(cluster)
+                # If object is at -10 deg, steer +ve (RIGHT nudge)
+                # If object is at +10 deg, steer -ve (LEFT nudge)
+                steer_offset -= STEER_GAIN * avg_angle
 
-        if not self.obstacle_present:
-            # Currently moving — check if we need to stop
-            if min_distance < self.stop_distance:
-                self.obstacle_present = True
-                self.get_logger().warn(
-                    f'OBSTACLE DETECTED at {min_distance:.2f}m — sending STOP')
-                self._publish_safety('STOP')
-                self._publish_obstacle_info(min_distance, 'DETECTED')
-        else:
-            # Currently stopped — check if path is clear to resume
-            if min_distance > self.clear_distance:
-                self.obstacle_present = False
-                self.get_logger().info(
-                    f'Path clear at {min_distance:.2f}m — sending CLEAR')
-                self._publish_safety('CLEAR')
-                self._publish_obstacle_info(min_distance, 'CLEARED')
-            else:
-                # Still blocked — keep publishing STOP at each scan
-                self._publish_safety('STOP')
+        # 4. Publish
+        stop_msg = Bool()
+        stop_msg.data = should_stop
+        self._stop_pub.publish(stop_msg)
 
-    def _get_min_front_distance(self, msg):
-        """
-        Returns the minimum valid range reading within the front arc.
-        Filters out inf, nan, and out-of-range values.
-        """
-        half_arc_rad = math.radians(self.front_arc_deg / 2.0)
-
-        angle      = msg.angle_min
-        min_dist   = float('inf')
-        valid_count = 0
-
-        for r in msg.ranges:
-            # Only consider readings within the front-facing arc
-            if -half_arc_rad <= angle <= half_arc_rad:
-                if (not math.isnan(r) and
-                        not math.isinf(r) and
-                        msg.range_min <= r <= msg.range_max):
-                    min_dist    = min(min_dist, r)
-                    valid_count += 1
-
-            angle += msg.angle_increment
-
-        if valid_count == 0:
-            return None
-
-        return min_dist
-
-    def _publish_safety(self, status):
-        """Publish STOP or CLEAR to /safety_status."""
-        msg      = String()
-        msg.data = status
-        self.safety_pub.publish(msg)
-
-    def _publish_obstacle_info(self, distance, event):
-        """Publish human-readable obstacle info for debugging."""
-        msg      = String()
-        msg.data = f'{event}: obstacle at {distance:.2f}m'
-        self.obstacle_pub.publish(msg)
-
+        steer_msg = Float32()
+        steer_msg.data = steer_offset
+        self._steer_pub.publish(steer_msg)
 
 def main(args=None):
     rclpy.init(args=args)
-    node = ObstacleDetector()
+    node = ObstacleDetectorNode()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
     finally:
-        node.destroy_node()
-        rclpy.shutdown()
-
+        try:
+            node.destroy_node()
+            rclpy.shutdown()
+        except Exception as e:
+            # Shutdown errors are usually benign (e.g., already shut down)
+            print(f'Shutdown warning (ObstacleDetectorNode): {e}')
 
 if __name__ == '__main__':
     main()
