@@ -115,6 +115,21 @@
     </link>
   </model>
 
+  <!-- Road W: Hub Bay→Roundabout  13 m, centred at (-6.5,0) -->
+  <model name="road_W">
+    <static>true</static><pose>-6.5 0 0.03 0 0 0</pose>
+    <link name="link">
+      <collision name="col">
+        <geometry><box><size>13.0 8.0 0.06</size></box></geometry>
+        <surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface>
+      </collision>
+      <visual name="vis">
+        <geometry><box><size>13.0 8.0 0.06</size></box></geometry>
+        <material><ambient>0.06 0.06 0.06 1</ambient><diffuse>0.08 0.08 0.08 1</diffuse></material>
+      </visual>
+    </link>
+  </model>
+
   <!-- Road S: Hub→TEMPLE  40 m, centred at (0,-25) -->
   <model name="road_S">
     <static>true</static><pose>0 -25 0.03 0 0 0</pose>
