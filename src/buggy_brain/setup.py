@@ -32,6 +32,8 @@ setup(
             'speed_controller = buggy_brain.speed_controller:main',
             'sensor_stub = buggy_brain.sensor_stub:main',
             'set_destination = buggy_brain.set_destination:main',
+            'nav2_destination_sender = buggy_brain.nav2_destination_sender:main',
+            'steering_visualizer = buggy_brain.steering_visualizer:main',
         ],
     },
 )

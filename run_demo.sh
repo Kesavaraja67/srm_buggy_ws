@@ -1,7 +1,6 @@
 #!/bin/bash
 # =============================================================================
 # SRM Autonomous Electric Campus Buggy — Demo Launch Script
-# Team Charlie owns this file.
 # Usage: bash run_demo.sh [--headless] [--world <world_name>]
 # =============================================================================
 
@@ -25,9 +24,10 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 echo "========================================"
-echo " SRM Autonomous Buggy — Demo Runner"
+echo " SRM Autonomous Buggy — Nav2 Demo Runner"
 echo " World : $WORLD"
 echo " Headless: $HEADLESS"
+echo " Lidar Map: my_campus_map.pgm"
 echo "========================================"
 
 # Source ROS 2 Humble
@@ -42,10 +42,21 @@ else
     exit 1
 fi
 
-# Launch Gazebo + RViz + all nodes
+# Kill any lingering processes from previous runs
+echo "[INFO] Cleaning up old processes..."
+pkill -f gzserver 2>/dev/null || true
+pkill -f gzclient 2>/dev/null || true
+pkill -f path_planner 2>/dev/null || true
+pkill -f nav2_destination_sender 2>/dev/null || true
+pkill -f waypoint_follower 2>/dev/null || true
+pkill -f rviz2 2>/dev/null || true
+sleep 1
+
+# Launch the official Nav2 stack configuration
+echo "[INFO] Starting Gazebo + Nav2 + AMCL with LiDAR Map..."
 if [ "$HEADLESS" = true ]; then
     export HEADLESS=1
-    ros2 launch buggy_bringup full_system.launch.py world:="$WORLD" headless:=true
+    ros2 launch buggy_bringup nav2_launch.py world:="$WORLD" gui:=false
 else
-    ros2 launch buggy_bringup full_system.launch.py world:="$WORLD" headless:=false
+    ros2 launch buggy_bringup nav2_launch.py world:="$WORLD" gui:=true
 fi

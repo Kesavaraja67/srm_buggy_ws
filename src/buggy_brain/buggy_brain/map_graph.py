@@ -1,42 +1,54 @@
 #!/usr/bin/env python3
 """
-map_graph.py  v3.0
+map_graph.py  v4.0
 ──────────────────────────────────────────────────────────────
 Campus road graph + Dijkstra for SRM Autonomous Buggy.
 
-Real SRM Trichy campus — alignment-matched coordinates:
-  BUGGY_HUB  = (-13.0,  0.0)  ← Alignment origin (Parking Bay)
-  SRM_IST    = (-12.0, 50.0)  ← North building
-  SRM_HOSP   = ( 50.0, 12.0)  ← East building
-  SRM_TEMPLE = (-12.0,-50.0)  ← South building
+Coordinates matched to srm_campus.world:
+  BUGGY_HUB  = (-13.0,  0.0)   Parking Bay (West)
+  SRM_IST    = (  0.0, 50.0)   North building
+  SRM_HOSP   = ( 50.0,  0.0)   East building
+  SRM_TEMPLE = (  0.0,-50.0)   South building
 
-Plan Reference: §2.2 ODD Map
+Roundabout at (0,0) with radius ~7m road centerline.
+Intermediate nodes (NW/NE/SW/SE) ensure smooth turns.
 """
 import heapq
 from typing import Dict, List, Tuple, Optional
 
-# ── §2.2 ODD — Named campus destinations ─────────────────────
+# ── Named campus destinations ────────────────────────────────
 NODES = {
-    'BUGGY_HUB':  (-13.0,   0.0),
-    'SRM_IST':    (-12.0,  50.0),
-    'SRM_HOSP':   ( 50.0,  12.0),
-    'SRM_TEMPLE': (-12.0, -50.0),
-    'RND_N':      (  0.0,   8.0),
-    'RND_S':      (  0.0,  -8.0),
-    'RND_E':      (  8.0,   0.0),
-    'RND_W':      ( -8.0,   0.0),
+    'BUGGY_HUB':  (-13.0,   0.0),   # Parking Bay
+    'SRM_IST':    (  0.0,  50.0),   # North building
+    'SRM_HOSP':   ( 50.0,   0.0),   # East building
+    'SRM_TEMPLE': (  0.0, -50.0),   # South building
+    'RND_N':      (  0.0,   7.0),   # Roundabout North
+    'RND_S':      (  0.0,  -7.0),   # Roundabout South
+    'RND_E':      (  7.0,   0.0),   # Roundabout East
+    'RND_W':      ( -7.0,   0.0),   # Roundabout West
+    'RND_NW':     ( -5.0,   5.0),   # Roundabout NW
+    'RND_NE':     (  5.0,   5.0),   # Roundabout NE
+    'RND_SW':     ( -5.0,  -5.0),   # Roundabout SW
+    'RND_SE':     (  5.0,  -5.0),   # Roundabout SE
 }
 
-# ── §2.2 — Road network (metres) ─────────────────────────────
+# ── Road network (bidirectional, metres) ─────────────────────
 EDGES = {
-    'BUGGY_HUB':  [('RND_W', 5.0)],
-    'SRM_IST':    [('RND_N', 42.0)],
-    'SRM_HOSP':   [('RND_E', 42.0)],
-    'SRM_TEMPLE': [('RND_S', 42.0)],
-    'RND_N':      [('SRM_IST', 42.0), ('RND_W', 12.0), ('RND_E', 12.0)],
-    'RND_S':      [('SRM_TEMPLE', 42.0), ('RND_W', 12.0), ('RND_E', 12.0)],
-    'RND_E':      [('SRM_HOSP', 42.0), ('RND_N', 12.0), ('RND_S', 12.0)],
-    'RND_W':      [('BUGGY_HUB', 5.0), ('RND_N', 12.0), ('RND_S', 12.0)],
+    'BUGGY_HUB':  [('RND_W', 6.0)],
+    'SRM_IST':    [('RND_N', 43.0)],
+    'SRM_HOSP':   [('RND_E', 43.0)],
+    'SRM_TEMPLE': [('RND_S', 43.0)],
+
+    'RND_N':      [('SRM_IST', 43.0),  ('RND_NW', 5.5), ('RND_NE', 5.5)],
+    'RND_E':      [('SRM_HOSP', 43.0), ('RND_NE', 5.5), ('RND_SE', 5.5)],
+    'RND_S':      [('SRM_TEMPLE', 43.0), ('RND_SE', 5.5), ('RND_SW', 5.5)],
+    'RND_W':      [('BUGGY_HUB', 6.0), ('RND_NW', 5.5), ('RND_SW', 5.5)],
+
+    # Intermediate curve nodes (bidirectional)
+    'RND_NW':     [('RND_N', 5.5), ('RND_W', 5.5)],
+    'RND_NE':     [('RND_N', 5.5), ('RND_E', 5.5)],
+    'RND_SE':     [('RND_S', 5.5), ('RND_E', 5.5)],
+    'RND_SW':     [('RND_S', 5.5), ('RND_W', 5.5)],
 }
 
 # ── Terminal menu mapping ─────────────────────────────────────
@@ -72,8 +84,8 @@ MENU = (
 
 def find_shortest_path(graph: Dict[str, List[Tuple[str, float]]], start: str, goal: str) -> List[str]:
     """
-    Dijkstra shortest-path — §5.2 Path Planning.
-    Returns ordered list of node names: start → ... → goal
+    Dijkstra shortest-path.
+    Returns ordered list of node names: start -> ... -> goal
     """
     if start not in graph or goal not in graph:
         return []
@@ -98,27 +110,27 @@ def find_shortest_path(graph: Dict[str, List[Tuple[str, float]]], start: str, go
     while node is not None:
         path.append(node)
         node = previous[node]
-    # Unreachable goal: path will be [goal] with no connection to start
     if len(path) == 1 and path[0] != start:
         return []
     return list(reversed(path))
 
+
 def get_path_coordinates(path):
     return [NODES[node] for node in path if node in NODES]
 
+
 if __name__ == '__main__':
     print("=" * 60)
-    print("  SRM Autonomous Buggy — map_graph.py v3.0 test")
+    print("  SRM Autonomous Buggy — map_graph.py v4.0 test")
     print("=" * 60)
 
     tests = [
-        ('BUGGY_HUB', 'SRM_IST',    ['BUGGY_HUB', 'RND_W', 'RND_N', 'SRM_IST']),
-        ('BUGGY_HUB', 'SRM_HOSP',   ['BUGGY_HUB', 'RND_W', 'RND_N', 'RND_E', 'SRM_HOSP']),
-        ('BUGGY_HUB', 'SRM_TEMPLE', ['BUGGY_HUB', 'RND_W', 'RND_S', 'SRM_TEMPLE']),
-        # Reverse paths
-        ('SRM_IST',    'BUGGY_HUB', ['SRM_IST', 'RND_N', 'RND_W', 'BUGGY_HUB']),
-        ('SRM_HOSP',   'BUGGY_HUB', ['SRM_HOSP', 'RND_E', 'RND_N', 'RND_W', 'BUGGY_HUB']),
-        ('SRM_TEMPLE', 'BUGGY_HUB', ['SRM_TEMPLE', 'RND_S', 'RND_W', 'BUGGY_HUB']),
+        ('BUGGY_HUB', 'SRM_IST',    ['BUGGY_HUB', 'RND_W', 'RND_NW', 'RND_N', 'SRM_IST']),
+        ('BUGGY_HUB', 'SRM_HOSP',   ['BUGGY_HUB', 'RND_W', 'RND_NW', 'RND_N', 'RND_NE', 'RND_E', 'SRM_HOSP']),
+        ('BUGGY_HUB', 'SRM_TEMPLE', ['BUGGY_HUB', 'RND_W', 'RND_SW', 'RND_S', 'SRM_TEMPLE']),
+        ('SRM_IST',    'BUGGY_HUB', ['SRM_IST', 'RND_N', 'RND_NW', 'RND_W', 'BUGGY_HUB']),
+        ('SRM_HOSP',   'BUGGY_HUB', ['SRM_HOSP', 'RND_E', 'RND_NE', 'RND_N', 'RND_NW', 'RND_W', 'BUGGY_HUB']),
+        ('SRM_TEMPLE', 'BUGGY_HUB', ['SRM_TEMPLE', 'RND_S', 'RND_SW', 'RND_W', 'BUGGY_HUB']),
     ]
 
     all_ok = True
@@ -130,7 +142,6 @@ if __name__ == '__main__':
         print(f"\n  {'✅' if ok else '❌'}  {start} → {goal}")
         print(f"     {DESTINATION_DISPLAY[goal]}")
         print(f"     Path : {' → '.join(result)}")
-        # Compute total distance along path
         if len(result) > 1:
             total_dist = sum(
                 next(w for neighbor, w in EDGES[result[i]] if neighbor == result[i + 1])
