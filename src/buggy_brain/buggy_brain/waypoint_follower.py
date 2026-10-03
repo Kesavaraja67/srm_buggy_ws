@@ -13,16 +13,22 @@ from nav_msgs.msg import Odometry, Path
 from std_msgs.msg import String, Float32
 
 # Tuning constants
-MAX_LINEAR_SPEED  = 3.00   # m/s — capped for safety in sim
-MIN_LINEAR_SPEED  = 0.40   # m/s — always make forward progress
+MAX_LINEAR_SPEED  = 2.00   # m/s
+MIN_LINEAR_SPEED  = 0.30   # m/s
 ANGULAR_P_GAIN    = 1.20   # proportional gain on heading error
-MAX_ANGULAR_SPEED = 0.90   # rad/s cap
-ARRIVAL_RADIUS    = 1.80   # metres — optimal for sim stability
-SLOW_TURN_SPEED   = 0.40   # m/s linear speed during curves
+MAX_ANGULAR_SPEED = 1.00   # rad/s cap
+ARRIVAL_RADIUS    = 2.00   # metres
+SLOW_TURN_SPEED   = 0.30   # m/s linear speed during curves
 HEADING_THRESHOLD = 0.40   # rad — threshold for slowing down (~23°)
 HEADING_DEADBAND  = 0.05   # rad
 TURN_IN_PLACE_THR = 0.90   # rad — stop and spin if error > ~51°
 CONTROL_RATE_HZ   = 10
+
+# Spawn offset — Gazebo diff_drive odom starts at (0,0)
+# but our map graph has the hub at (-13, 0)
+SPAWN_X   = -13.0
+SPAWN_Y   =   0.0
+SPAWN_YAW =   0.0
 
 
 def yaw_from_quaternion(q) -> float:
@@ -66,9 +72,27 @@ class WaypointFollowerNode(Node):
         )
 
     def _odom_callback(self, msg: Odometry):
-        self._pos_x    = msg.pose.pose.position.x
-        self._pos_y    = msg.pose.pose.position.y
-        self._yaw      = yaw_from_quaternion(msg.pose.pose.orientation)
+        raw_x = msg.pose.pose.position.x
+        raw_y = msg.pose.pose.position.y
+
+        # On first message, decide if odom is relative (starts ~0) or absolute (starts ~-13)
+        if not hasattr(self, '_odom_offset_set'):
+            if abs(raw_x) < 2.0 and abs(raw_y) < 2.0:
+                # Relative odom — need to add spawn offset
+                self._offset_x = SPAWN_X
+                self._offset_y = SPAWN_Y
+            else:
+                # Absolute odom — no offset needed
+                self._offset_x = 0.0
+                self._offset_y = 0.0
+            self._odom_offset_set = True
+            self.get_logger().info(
+                f'Odom offset set: ({self._offset_x}, {self._offset_y}), '
+                f'first raw: ({raw_x:.2f}, {raw_y:.2f})')
+
+        self._pos_x = raw_x + self._offset_x
+        self._pos_y = raw_y + self._offset_y
+        self._yaw = yaw_from_quaternion(msg.pose.pose.orientation)
         self._odom_ready = True
 
     def _state_callback(self, msg: String):

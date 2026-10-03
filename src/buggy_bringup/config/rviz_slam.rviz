@@ -1,0 +1,45 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Views
+    Name: Views
+
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.5
+      Cell Size: 1
+      Class: rviz_default_plugins/Grid
+      Name: Grid
+    - Class: rviz_default_plugins/RobotModel
+      Name: RobotModel
+      Description Topic:
+        Value: /robot_description
+    - Class: rviz_default_plugins/LaserScan
+      Name: LiDAR Scan
+      Topic:
+        Value: /scan
+      Color: 255; 50; 50
+      Size (m): 0.05
+      Decay Time: 0
+    - Class: rviz_default_plugins/Map
+      Name: SLAM Map
+      Topic:
+        Value: /map
+      Alpha: 0.7
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: false
+    - Class: rviz_default_plugins/Odometry
+      Name: Odometry
+      Topic:
+        Value: /odom
+      Keep: 100
+  Fixed Frame: map
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+  Views:
+    Current:
+      Class: rviz_default_plugins/TopDownOrtho
+      Scale: 4

@@ -79,16 +79,16 @@ def generate_launch_description():
             '-entity', entity_name,
             '-x', '-13.0',   # shelter bay center X
             '-y', '0.0',     # shelter bay center Y
-            '-z', '0.15',    # slightly above bay surface for physics settling
+            '-z', '0.30',    # above bay surface — drops onto road cleanly
             '-Y', '0.0',     # 0.0 yaw → facing East, looking out of the bay
         ],
         output='screen',
     )
 
     # ── 4. Brain nodes — enabled for Team Bravo ──
+    # NOTE: path_planner is launched separately by run_demo.sh
+    # because it needs stdin for the destination menu
     brain_nodes = [
-        Node(package='buggy_brain', executable='path_planner',
-             parameters=[{'use_sim_time': True}], output='screen'),
         Node(package='buggy_brain', executable='waypoint_follower',
              parameters=[{'use_sim_time': True}], output='screen'),
         Node(package='buggy_brain', executable='obstacle_detector',
@@ -97,8 +97,6 @@ def generate_launch_description():
              parameters=[{'use_sim_time': True}], output='screen'),
         Node(package='buggy_brain', executable='speed_controller',
              parameters=[{'use_sim_time': True}], output='screen'),
-        # TODO(Team Bravo): add console_scripts before enabling:
-        # ultrasonic_monitor, crowd_detector, demo_visualizer
     ]
 
     return LaunchDescription([
@@ -109,5 +107,5 @@ def generate_launch_description():
         robot_state_publisher,
         joint_state_publisher,
         spawn_entity,
-        # *brain_nodes,   # ← Team Bravo: disabling here; launched by run_bravo_demo.sh instead
+        *brain_nodes,
     ])
